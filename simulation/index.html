@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+   <meta charset="UTF-8">
+   <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+   >
+   <title>SIMTOOL</title>
+   <script src="static/tailwind.js"></script>
+   <link
+      href="static/flowbite.css"
+      rel="stylesheet"
+   />
+   <script src="static/neodrag.js"></script>
+   <script src="static/vue.js"></script>
+   <script
+      src="static/components/NanoCard.js"
+      type="module"
+   ></script>
+</head>
+
+<body class="bg-gray-100 h-screen p-4">
+   <div
+      id="app"
+      class="antialiased bg-gray-50"
+      v-cloak
+   >
+      <nav class="bg-white border-b border-gray-200 px-4 py-2.5 fixed left-0 right-0 top-0 z-50">
+         <div class="flex flex-wrap justify-between items-center">
+            <div class="flex justify-start items-center">
+               <button
+                  data-drawer-target="drawer-navigation"
+                  data-drawer-toggle="drawer-navigation"
+                  aria-controls="drawer-navigation"
+                  class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:ring-2 focus:ring-gray-100"
+               >
+                  <svg
+                     aria-hidden="true"
+                     class="w-6 h-6"
+                     fill="currentColor"
+                     viewBox="0 0 20 20"
+                     xmlns="http://www.w3.org/2000/svg"
+                  >
+                     <path
+                        fill-rule="evenodd"
+                        d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                        clip-rule="evenodd"
+                     ></path>
+                  </svg>
+                  <span class="sr-only">Toggle sidebar</span>
+               </button>
+               <h1
+                  class="text-3xl font-bold pr-8"
+                  @click="showSidebar = !showSidebar"
+               >SIMTOOL (SIM!)</h1>
+               <div>
+                  <span
+                     id="online-status"
+                     class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-green-800 bg-green-100 rounded"
+                     :class="{'opacity-100': isConnected, 'opacity-10': !isConnected}"
+                  >
+                     Online
+                  </span>
+                  <span
+                     id="offline-status"
+                     class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-red-800 bg-red-100 rounded"
+                     :class="{'opacity-100': !isConnected, 'opacity-10': isConnected}"
+                  >
+                     Offline
+                  </span>
+               </div>
+            </div>
+         </div>
+      </nav>
+
+      <!-- Sidebar -->
+      <aside
+         id="drawer-navigation"
+         class="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0"
+         aria-label="Sidebar"
+      >
+         <div class="h-full px-3 pb-4 overflow-y-auto bg-white">
+            <ul class="space-y-2 font-medium border-b border-gray-200 mb-4 pb-4">
+               <li>
+                  <a
+                     href="/simulation"
+                     class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 group"
+                  >
+                     <svg
+                        class="w-6 h-6 text-gray-800"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                     >
+                        <path
+                           stroke="currentColor"
+                           stroke-linecap="round"
+                           stroke-linejoin="round"
+                           stroke-width="2"
+                           d="M9.143 4H4.857A.857.857 0 0 0 4 4.857v4.286c0 .473.384.857.857.857h4.286A.857.857 0 0 0 10 9.143V4.857A.857.857 0 0 0 9.143 4Zm10 0h-4.286a.857.857 0 0 0-.857.857v4.286c0 .473.384.857.857.857h4.286A.857.857 0 0 0 20 9.143V4.857A.857.857 0 0 0 19.143 4Zm-10 10H4.857a.857.857 0 0 0-.857.857v4.286c0 .473.384.857.857.857h4.286a.857.857 0 0 0 .857-.857v-4.286A.857.857 0 0 0 9.143 14Zm10 0h-4.286a.857.857 0 0 0-.857.857v4.286c0 .473.384.857.857.857h4.286a.857.857 0 0 0 .857-.857v-4.286a.857.857 0 0 0-.857-.857Z"
+                        />
+                     </svg>
+
+                     <span class="ml-3">Home</span>
+                  </a>
+               </li>
+            </ul>
+            <ul
+               id="song-list"
+               class="space-y-2"
+            >
+
+            </ul>
+         </div>
+      </aside>
+
+      <main class="p-4 md:ml-64 h-auto pt-20">
+         <div class="flex justify-between items-center mb-8">
+            <h2 class="text-3xl font-bold">{{ selectedSongTitle }}</h2>
+            <div class="flex items-center gap-4">
+               <!-- Add Label Filter -->
+               <div class="flex gap-2">
+                  <button
+                     v-for="label in ['Alle', 'A', 'B', 'C']"
+                     :key="label"
+                     @click="setLabelFilter(label)"
+                     class="px-3 py-1 rounded"
+                     :class="{
+                        'bg-blue-500 text-white': activeLabel === label,
+                        'bg-gray-200 text-gray-700': activeLabel !== label
+                     }"
+                  >
+                     {{ label }}
+                  </button>
+               </div>
+               <!-- Existing Loading Status -->
+               <span
+                  class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-green-800 bg-green-100 rounded"
+                  :class="{'hidden': !loadingStatus.show}"
+               >
+                  {{ loadingStatus.text }}
+               </span>
+            </div>
+         </div>
+
+         <!-- Song List (shown when no song is selected) -->
+         <div
+            v-if="selectedSongTitle === 'Wähle ein Song'"
+            class="bg-white p-6 rounded-lg shadow-md"
+         >
+            <div class="overflow-x-auto">
+               <table class="w-full text-sm text-left text-gray-500">
+                  <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                     <tr>
+                        <th class="px-6 py-3">Name</th>
+                        <th class="px-6 py-3">LADEN</th>
+                        <th class="px-6 py-3">Versionen</th>
+                        <th class="px-6 py-3">Tempo</th>
+                        <th class="px-6 py-3">Taktart</th>
+                        <th class="px-6 py-3">Zuletzt geändert</th>
+                        <th class="px-6 py-3">Programm</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     <tr
+                        v-for="song in filteredSongs"
+                        :key="song.name"
+                        class="bg-white border-b"
+                     >
+                        <td class="px-6 py-4">{{ song.name }}</td>
+                        <td class="px-6 py-4">
+                           <button
+                              @click="loadSong(song.name)"
+                              class="text-blue-600 hover:text-blue-900 w-20 h-10 bg-gray-200 rounded-lg flex items-center justify-center"
+                              title="Load Song"
+                           >
+                              <svg
+                                 class="w-6 h-6 text-gray-800"
+                                 aria-hidden="true"
+                                 xmlns="http://www.w3.org/2000/svg"
+                                 fill="currentColor"
+                                 viewBox="0 0 10 16"
+                              >
+                                 <path d="M3.414 1A2 2 0 0 0 0 2.414v11.172A2 2 0 0 0 3.414 15L9 9.414a2 2 0 0 0 0-2.828L3.414 1Z"></path>
+                              </svg>
+                           </button>
+                        </td>
+                        <td class="px-6 py-4">{{ song.versions_count }}</td>
+                        <td class="px-6 py-4">{{ song.tempo }}</td>
+                        <td class="px-6 py-4">{{ song.beat_style }}</td>
+                        <td class="px-6 py-4">{{ new Date(song.last_modified).toLocaleString() }}</td>
+                        <td class="px-6 py-4">
+                           <div class="flex gap-2">
+                              <button
+                                 v-for="label in ['A', 'B', 'C']"
+                                 :key="label"
+                                 class="px-3 py-1 rounded"
+                                 :class="{
+                                    'bg-blue-500 text-white': song.label === label,
+                                    'bg-gray-200 text-gray-700': song.label !== label
+                                 }"
+                                 disabled
+                              >
+                                 {{ label }}
+                              </button>
+                           </div>
+                        </td>
+                     </tr>
+                  </tbody>
+               </table>
+            </div>
+         </div>
+
+         <!-- Timeline (shown when song is selected) -->
+         <div
+            v-else
+            id="timeline"
+            class="space-y-4 mb-8 pb-16"
+         >
+            <!-- Timeline items will be inserted here -->
+         </div>
+
+         <!-- Controls -->
+         <div class="flex gap-4 justify-center mt-8 bottom-0 fixed p-4 z-50">
+            <button
+               v-show="showPlayButton"
+               class="bg-green-500 text-white px-16 py-4 rounded-lg text-2xl"
+               @click="playSong"
+            >PLAY</button>
+            <button
+               v-if="showNextButton"
+               @click="handleNext"
+               class="bg-green-500 text-white px-16 py-4 rounded-lg text-2xl"
+            >
+               Next
+            </button>
+            <button
+               v-show="showStopButton"
+               class="bg-red-500 text-white px-4 py-4 rounded-lg text-xl m-2"
+               @click="stopSong"
+            >STOP</button>
+         </div>
+      </main>
+   </div>
+
+
+   <script src="./static/flowbite.min.js"></script>
+
+
+   <script type="module">
+      import { NanoCard } from './static/components/NanoCard.js'
+
+      const { createApp } = Vue
+
+      // Simulated song data
+      const MOCK_SONGS = { "songs": [{ "name": "Ace Of Spades", "song_name": "/Users/samuelrhyner/Library/CloudStorage/GoogleDrive-samuel.rhyner.sr@gmail.com/My Drive/Uzepatscher/LED/uzepatscher-led-gwaendli/hub/songs/Ace Of Spades_v4_20250208_193646.tsn", "versions_count": 4, "latest_version": 4, "tempo": 144, "beat_style": "BS_16tel", "label": "A", "order": 4, "last_modified": "2025-02-08T19:36:46.787079+00:00" }, { "name": "Army of the Nigth", "song_name": "/Users/samuelrhyner/Library/CloudStorage/GoogleDrive-samuel.rhyner.sr@gmail.com/My Drive/Uzepatscher/LED/uzepatscher-led-gwaendli/hub/songs/Army of the Nigth_v10_20250208_193654.tsn", "versions_count": 10, "latest_version": 10, "tempo": 170, "beat_style": "BS_16tel", "label": "A", "order": 3, "last_modified": "2025-02-08T19:36:54.485615+00:00" }, { "name": "Around the World", "song_name": "/Users/samuelrhyner/Library/CloudStorage/GoogleDrive-samuel.rhyner.sr@gmail.com/My Drive/Uzepatscher/LED/uzepatscher-led-gwaendli/hub/songs/Around the World_v14_20250208_193702.tsn", "versions_count": 14, "latest_version": 14, "tempo": 126, "beat_style": "BS_16tel", "label": "A", "order": 7, "last_modified": "2025-02-08T19:37:02.433381+00:00" }, { "name": "California Dreaming", "song_name": "/Users/samuelrhyner/Library/CloudStorage/GoogleDrive-samuel.rhyner.sr@gmail.com/My Drive/Uzepatscher/LED/uzepatscher-led-gwaendli/hub/songs/California Dreaming_v4_20250210_224226.tsn", "versions_count": 4, "latest_version": 4, "tempo": 104, "beat_style": "BS_16tel", "label": "B", "order": 11, "last_modified": "2025-02-10T22:42:26.786092+00:00" }, { "name": "Figure it out", "song_name": "/Users/samuelrhyner/Library/CloudStorage/GoogleDrive-samuel.rhyner.sr@gmail.com/My Drive/Uzepatscher/LED/uzepatscher-led-gwaendli/hub/songs/Figure it out_v5_20250208_193710.tsn", "versions_count": 5, "latest_version": 5, "tempo": 216, "beat_style": "BS_16tel", "label": "A", "order": 2, "last_modified": "2025-02-08T19:37:10.218909+00:00" }, { "name": "Gossip", "song_name": "/Users/samuelrhyner/Library/CloudStorage/GoogleDrive-samuel.rhyner.sr@gmail.com/My Drive/Uzepatscher/LED/uzepatscher-led-gwaendli/hub/songs/Gossip_v13_20250208_193717.tsn", "versions_count": 13, "latest_version": 13, "tempo": 152, "beat_style": "BS_16tel", "label": "B", "order": 10, "last_modified": "2025-02-08T19:37:17.119996+00:00" }, { "name": "Im still standing", "song_name": "/Users/samuelrhyner/Library/CloudStorage/GoogleDrive-samuel.rhyner.sr@gmail.com/My Drive/Uzepatscher/LED/uzepatscher-led-gwaendli/hub/songs/Im still standing_v1_20250208_193747.tsn", "versions_count": 1, "latest_version": 1, "tempo": 188, "beat_style": "BS_16tel", "label": "B", "order": 14, "last_modified": "2025-02-08T19:37:47.054183+00:00" }, { "name": "Killing in the Name", "song_name": "/Users/samuelrhyner/Library/CloudStorage/GoogleDrive-samuel.rhyner.sr@gmail.com/My Drive/Uzepatscher/LED/uzepatscher-led-gwaendli/hub/songs/Killing in the Name_v4_20250208_193729.tsn", "versions_count": 4, "latest_version": 4, "tempo": 92, "beat_style": "BS_16tel", "label": "B", "order": 13, "last_modified": "2025-02-08T19:37:29.419602+00:00" }, { "name": "Leave a light on", "song_name": "/Users/samuelrhyner/Library/CloudStorage/GoogleDrive-samuel.rhyner.sr@gmail.com/My Drive/Uzepatscher/LED/uzepatscher-led-gwaendli/hub/songs/Leave a light on_v14_20250208_193758.tsn", "versions_count": 14, "latest_version": 14, "tempo": 138, "beat_style": "BS_16tel", "label": "A", "order": 1, "last_modified": "2025-02-08T19:37:58.675365+00:00" }, { "name": "Spiel mir das Lied", "song_name": "/Users/samuelrhyner/Library/CloudStorage/GoogleDrive-samuel.rhyner.sr@gmail.com/My Drive/Uzepatscher/LED/uzepatscher-led-gwaendli/hub/songs/Spiel mir das Lied_v2_20250210_224241.tsn", "versions_count": 2, "latest_version": 2, "tempo": 87, "beat_style": "BS_16tel", "label": "B", "order": 8, "last_modified": "2025-02-10T22:42:41.517367+00:00" }, { "name": "This Love", "song_name": "/Users/samuelrhyner/Library/CloudStorage/GoogleDrive-samuel.rhyner.sr@gmail.com/My Drive/Uzepatscher/LED/uzepatscher-led-gwaendli/hub/songs/This Love_v2_20250210_224259.tsn", "versions_count": 2, "latest_version": 2, "tempo": 190, "beat_style": "BS_16tel", "label": "B", "order": 9, "last_modified": "2025-02-10T22:42:59.054784+00:00" }, { "name": "Valhalla", "song_name": "/Users/samuelrhyner/Library/CloudStorage/GoogleDrive-samuel.rhyner.sr@gmail.com/My Drive/Uzepatscher/LED/uzepatscher-led-gwaendli/hub/songs/Valhalla_v23_20250208_193809.tsn", "versions_count": 23, "latest_version": 23, "tempo": 195, "beat_style": "BS_16tel", "label": "A", "order": 5, "last_modified": "2025-02-08T19:38:09.779581+00:00" }, { "name": "Vois ton chemine", "song_name": "/Users/samuelrhyner/Library/CloudStorage/GoogleDrive-samuel.rhyner.sr@gmail.com/My Drive/Uzepatscher/LED/uzepatscher-led-gwaendli/hub/songs/Vois ton chemine_v4_20250209_191356.tsn", "versions_count": 4, "latest_version": 4, "tempo": 136, "beat_style": "BS_16tel", "label": "B", "order": 12, "last_modified": "2025-02-09T19:13:56.470211+00:00" }, { "name": "You know my Name", "song_name": "/Users/samuelrhyner/Library/CloudStorage/GoogleDrive-samuel.rhyner.sr@gmail.com/My Drive/Uzepatscher/LED/uzepatscher-led-gwaendli/hub/songs/You know my Name_v5_20250208_193823.tsn", "versions_count": 5, "latest_version": 5, "tempo": 224, "beat_style": "BS_16tel", "label": "A", "order": 6, "last_modified": "2025-02-08T19:38:23.028556+00:00" }] }
+      // Add more mock responses here as needed
+      const MOCK_SONG_DETAILS = {
+         "Ace Of Spades": { "status": "success", "message": "Song loaded and ready", "version": 4, "details": { "name": "D:\\NFG\\NFG_Songs\\Uzepatscher 2025\\LED Songs\\Ace Of Spades_v3_20250205_201018.tsn", "tempo": 144, "beatStyle": "BS_16tel", "track_count": 1, "tracks": [{ "name": "LED", "channel": 9, "parts_count": 12, "parts": [{ "start": { "tick": 768, "seconds": 0.6666666666666667 }, "end": { "tick": 4223, "seconds": 3.665798611111111 }, "notes_count": 36, "part_name": "Intro" }, { "start": { "tick": 4224, "seconds": 3.666666666666667 }, "end": { "tick": 7295, "seconds": 6.332465277777779 }, "notes_count": 62, "part_name": "Bass + Pos" }, { "start": { "tick": 7296, "seconds": 6.333333333333334 }, "end": { "tick": 12671, "seconds": 10.999131944444445 }, "notes_count": 138, "part_name": "Str 1 + Trp" }, { "start": { "tick": 12672, "seconds": 11.0 }, "end": { "tick": 14207, "seconds": 12.332465277777779 }, "notes_count": 12, "part_name": "Ace Of Spades" }, { "start": { "tick": 14208, "seconds": 12.333333333333334 }, "end": { "tick": 19583, "seconds": 16.999131944444446 }, "notes_count": 138, "part_name": "Str 2" }, { "start": { "tick": 19584, "seconds": 17.0 }, "end": { "tick": 21887, "seconds": 18.999131944444446 }, "notes_count": 12, "part_name": "Ace Of Spades" }, { "start": { "tick": 21888, "seconds": 19.0 }, "end": { "tick": 25727, "seconds": 22.33246527777778 }, "notes_count": 42, "part_name": "Break 1" }, { "start": { "tick": 25728, "seconds": 22.333333333333336 }, "end": { "tick": 28799, "seconds": 24.999131944444446 }, "notes_count": 62, "part_name": "Bass + Pos" }, { "start": { "tick": 28800, "seconds": 25.0 }, "end": { "tick": 34175, "seconds": 29.665798611111114 }, "notes_count": 138, "part_name": "Str 3 + Trp" }, { "start": { "tick": 34176, "seconds": 29.666666666666668 }, "end": { "tick": 36479, "seconds": 31.665798611111114 }, "notes_count": 12, "part_name": "Ace Of Spades" }, { "start": { "tick": 36480, "seconds": 31.666666666666668 }, "end": { "tick": 40319, "seconds": 34.99913194444445 }, "notes_count": 42, "part_name": "Break 2" }, { "start": { "tick": 40320, "seconds": 35.0 }, "end": { "tick": 41471, "seconds": 35.99913194444445 }, "notes_count": 2, "part_name": "Schluss" }] }] } },
+         "Army of the Nigth": { "status": "success", "message": "Song loaded and ready", "version": 10, "details": { "name": "D:\\NFG\\NFG_Songs\\Uzepatscher 2025\\LED Songs\\Army of the Nigth_v9_20250204_163259.tsn", "tempo": 170, "beatStyle": "BS_16tel", "track_count": 2, "tracks": [{ "name": "LED", "channel": 9, "parts_count": 0, "parts": [] }, { "name": "LED", "channel": 9, "parts_count": 16, "parts": [{ "start": { "tick": 768, "seconds": 0.5647058823529413 }, "end": { "tick": 3839, "seconds": 2.8227941176470592 }, "notes_count": 58, "part_name": "Intro" }, { "start": { "tick": 3840, "seconds": 2.823529411764706 }, "end": { "tick": 6911, "seconds": 5.081617647058824 }, "notes_count": 96, "part_name": "Ref 1" }, { "start": { "tick": 6912, "seconds": 5.082352941176471 }, "end": { "tick": 9983, "seconds": 7.3404411764705895 }, "notes_count": 32, "part_name": "Str 1" }, { "start": { "tick": 9984, "seconds": 7.341176470588236 }, "end": { "tick": 13055, "seconds": 9.599264705882355 }, "notes_count": 62, "part_name": "Str 1 Teil 2" }, { "start": { "tick": 13056, "seconds": 9.600000000000001 }, "end": { "tick": 16127, "seconds": 11.858088235294119 }, "notes_count": 96, "part_name": "Ref 2" }, { "start": { "tick": 16128, "seconds": 11.858823529411767 }, "end": { "tick": 19199, "seconds": 14.116911764705884 }, "notes_count": 96, "part_name": "Ref 2 Teil 2" }, { "start": { "tick": 19200, "seconds": 14.11764705882353 }, "end": { "tick": 22271, "seconds": 16.37573529411765 }, "notes_count": 32, "part_name": "Str 2" }, { "start": { "tick": 22272, "seconds": 16.376470588235296 }, "end": { "tick": 25535, "seconds": 18.77573529411765 }, "notes_count": 62, "part_name": "Str 2 Teil 2" }, { "start": { "tick": 25536, "seconds": 18.776470588235295 }, "end": { "tick": 28607, "seconds": 21.034558823529416 }, "notes_count": 96, "part_name": "Ref 3" }, { "start": { "tick": 28608, "seconds": 21.035294117647062 }, "end": { "tick": 31679, "seconds": 23.29338235294118 }, "notes_count": 98, "part_name": "Ref 3 Teil 2" }, { "start": { "tick": 31680, "seconds": 23.294117647058826 }, "end": { "tick": 36671, "seconds": 26.9639705882353 }, "notes_count": 14, "part_name": "Bridge Bass" }, { "start": { "tick": 36672, "seconds": 26.964705882352945 }, "end": { "tick": 43007, "seconds": 31.622794117647064 }, "notes_count": 16, "part_name": "Bridge Posaunen" }, { "start": { "tick": 43008, "seconds": 31.62352941176471 }, "end": { "tick": 49151, "seconds": 36.140441176470596 }, "notes_count": 16, "part_name": "Bridge Trompeten" }, { "start": { "tick": 50304, "seconds": 36.98823529411765 }, "end": { "tick": 53375, "seconds": 39.24632352941177 }, "notes_count": 174, "part_name": "Ref 4" }, { "start": { "tick": 53376, "seconds": 39.247058823529414 }, "end": { "tick": 56447, "seconds": 41.50514705882353 }, "notes_count": 56, "part_name": "Ref 4 Teil 2" }, { "start": { "tick": 56448, "seconds": 41.505882352941185 }, "end": { "tick": 57215, "seconds": 42.06985294117648 }, "notes_count": 80, "part_name": "Schluss" }] }] } },
+         "Around the World": { "status": "success", "message": "Song loaded and ready", "version": 14, "details": { "name": "D:\\NFG\\NFG_Songs\\Uzepatscher 2025\\LED Songs\\Around the World_v13_20250204_173918.tsn", "tempo": 126, "beatStyle": "BS_16tel", "track_count": 1, "tracks": [{ "name": "LED", "channel": 9, "parts_count": 27, "parts": [{ "start": { "tick": 768, "seconds": 0.7619047619047619 }, "end": { "tick": 3839, "seconds": 3.8085317460317456 }, "notes_count": 66, "part_name": "Intro" }, { "start": { "tick": 3840, "seconds": 3.8095238095238093 }, "end": { "tick": 7679, "seconds": 7.618055555555555 }, "notes_count": 60, "part_name": "Play lala" }, { "start": { "tick": 7680, "seconds": 7.619047619047619 }, "end": { "tick": 10751, "seconds": 10.665674603174603 }, "notes_count": 128, "part_name": "Pos Str 1" }, { "start": { "tick": 10752, "seconds": 10.666666666666666 }, "end": { "tick": 13823, "seconds": 13.71329365079365 }, "notes_count": 60, "part_name": "Trp lala" }, { "start": { "tick": 13824, "seconds": 13.714285714285714 }, "end": { "tick": 16127, "seconds": 15.999007936507935 }, "notes_count": 16, "part_name": "Sing lala" }, { "start": { "tick": 16128, "seconds": 16.0 }, "end": { "tick": 17663, "seconds": 17.52281746031746 }, "notes_count": 34, "part_name": "Play lala" }, { "start": { "tick": 17664, "seconds": 17.523809523809522 }, "end": { "tick": 20735, "seconds": 20.570436507936506 }, "notes_count": 128, "part_name": "Pos Str 2" }, { "start": { "tick": 20736, "seconds": 20.57142857142857 }, "end": { "tick": 23807, "seconds": 23.618055555555554 }, "notes_count": 60, "part_name": "Trp lala" }, { "start": { "tick": 23808, "seconds": 23.619047619047617 }, "end": { "tick": 25343, "seconds": 25.14186507936508 }, "notes_count": 16, "part_name": "Sing lala" }, { "start": { "tick": 25344, "seconds": 25.142857142857142 }, "end": { "tick": 26879, "seconds": 26.6656746031746 }, "notes_count": 16, "part_name": "Lyra" }, { "start": { "tick": 26880, "seconds": 26.666666666666664 }, "end": { "tick": 28415, "seconds": 28.189484126984127 }, "notes_count": 16, "part_name": "Coda" }, { "start": { "tick": 28416, "seconds": 28.19047619047619 }, "end": { "tick": 29951, "seconds": 29.71329365079365 }, "notes_count": 54, "part_name": "Einsatz" }, { "start": { "tick": 29952, "seconds": 29.71428571428571 }, "end": { "tick": 31487, "seconds": 31.237103174603174 }, "notes_count": 16, "part_name": "Sing lala" }, { "start": { "tick": 31488, "seconds": 31.238095238095237 }, "end": { "tick": 33023, "seconds": 32.760912698412696 }, "notes_count": 16, "part_name": "Lyra" }, { "start": { "tick": 33024, "seconds": 32.76190476190476 }, "end": { "tick": 34559, "seconds": 34.28472222222222 }, "notes_count": 16, "part_name": "Einsatz" }, { "start": { "tick": 34560, "seconds": 34.285714285714285 }, "end": { "tick": 36095, "seconds": 35.80853174603175 }, "notes_count": 16, "part_name": "Sing lala" }, { "start": { "tick": 36096, "seconds": 35.80952380952381 }, "end": { "tick": 37631, "seconds": 37.332341269841265 }, "notes_count": 16, "part_name": "Lyra" }, { "start": { "tick": 37632, "seconds": 37.33333333333333 }, "end": { "tick": 39167, "seconds": 38.85615079365079 }, "notes_count": 50, "part_name": "Einsatz" }, { "start": { "tick": 39168, "seconds": 38.857142857142854 }, "end": { "tick": 40703, "seconds": 40.379960317460316 }, "notes_count": 16, "part_name": "Sing lala" }, { "start": { "tick": 40704, "seconds": 40.38095238095238 }, "end": { "tick": 42239, "seconds": 41.90376984126984 }, "notes_count": 16, "part_name": "Lyra" }, { "start": { "tick": 42240, "seconds": 41.904761904761905 }, "end": { "tick": 43775, "seconds": 43.42757936507936 }, "notes_count": 50, "part_name": "Einsatz" }, { "start": { "tick": 43776, "seconds": 43.42857142857142 }, "end": { "tick": 45311, "seconds": 44.951388888888886 }, "notes_count": 16, "part_name": "Sing lala" }, { "start": { "tick": 45312, "seconds": 44.95238095238095 }, "end": { "tick": 46847, "seconds": 46.47519841269841 }, "notes_count": 16, "part_name": "Lyra" }, { "start": { "tick": 46848, "seconds": 46.476190476190474 }, "end": { "tick": 48383, "seconds": 47.99900793650794 }, "notes_count": 50, "part_name": "Einsatz" }, { "start": { "tick": 48384, "seconds": 48.0 }, "end": { "tick": 49919, "seconds": 49.522817460317455 }, "notes_count": 16, "part_name": "Sing lala" }, { "start": { "tick": 49920, "seconds": 49.52380952380952 }, "end": { "tick": 51455, "seconds": 51.04662698412698 }, "notes_count": 16, "part_name": "Lyra" }, { "start": { "tick": 51456, "seconds": 51.047619047619044 }, "end": { "tick": 52991, "seconds": 52.570436507936506 }, "notes_count": 50, "part_name": "Einsatz" }] }] } },
+         "Figure it out": { "status": "success", "message": "Song loaded and ready", "version": 5, "details": { "name": "D:\\NFG\\NFG_Songs\\Uzepatscher 2025\\LED Songs\\Figure it out_v4_20250205_183147.tsn", "tempo": 216, "beatStyle": "BS_16tel", "track_count": 2, "tracks": [{ "name": "LED", "channel": 9, "parts_count": 0, "parts": [] }, { "name": "LED", "channel": 9, "parts_count": 12, "parts": [{ "start": { "tick": 768, "seconds": 0.44444444444444453 }, "end": { "tick": 3839, "seconds": 2.2216435185185186 }, "notes_count": 48, "part_name": "Intro" }, { "start": { "tick": 3840, "seconds": 2.2222222222222223 }, "end": { "tick": 9983, "seconds": 5.777199074074074 }, "notes_count": 54, "part_name": "Str 1 + Trp" }, { "start": { "tick": 9984, "seconds": 5.777777777777779 }, "end": { "tick": 16127, "seconds": 9.332754629629632 }, "notes_count": 80, "part_name": "Str 2" }, { "start": { "tick": 16128, "seconds": 9.333333333333334 }, "end": { "tick": 22271, "seconds": 12.888310185185187 }, "notes_count": 112, "part_name": "Pre 1 Posaunen" }, { "start": { "tick": 22272, "seconds": 12.888888888888891 }, "end": { "tick": 29183, "seconds": 16.888310185185187 }, "notes_count": 152, "part_name": "Ref 1" }, { "start": { "tick": 29184, "seconds": 16.888888888888893 }, "end": { "tick": 32255, "seconds": 18.666087962962965 }, "notes_count": 48, "part_name": "Intro" }, { "start": { "tick": 32256, "seconds": 18.666666666666668 }, "end": { "tick": 38399, "seconds": 22.221643518518523 }, "notes_count": 80, "part_name": "Str 3 + Trp" }, { "start": { "tick": 38400, "seconds": 22.222222222222225 }, "end": { "tick": 45311, "seconds": 26.221643518518523 }, "notes_count": 152, "part_name": "Ref 1" }, { "start": { "tick": 45312, "seconds": 26.222222222222225 }, "end": { "tick": 48383, "seconds": 27.9994212962963 }, "notes_count": 14, "part_name": "Bridge Teil1" }, { "start": { "tick": 48384, "seconds": 28.000000000000004 }, "end": { "tick": 57983, "seconds": 33.554976851851855 }, "notes_count": 104, "part_name": "Bridge Teil2 " }, { "start": { "tick": 57984, "seconds": 33.55555555555556 }, "end": { "tick": 66047, "seconds": 38.221643518518526 }, "notes_count": 152, "part_name": "Ref 1" }, { "start": { "tick": 66048, "seconds": 38.22222222222223 }, "end": { "tick": 68351, "seconds": 39.554976851851855 }, "notes_count": 2, "part_name": "Schluss" }] }] } },
+         "Gossip": { "status": "success", "message": "Song loaded and ready", "version": 13, "details": { "name": "D:\\NFG\\NFG_Songs\\Uzepatscher 2025\\LED Songs\\Gossip_v12_20250204_182702.tsn", "tempo": 152, "beatStyle": "BS_16tel", "track_count": 1, "tracks": [{ "name": "LED", "channel": 9, "parts_count": 12, "parts": [{ "start": { "tick": 768, "seconds": 0.6315789473684211 }, "end": { "tick": 3839, "seconds": 3.1570723684210527 }, "notes_count": 58, "part_name": "Intro" }, { "start": { "tick": 3840, "seconds": 3.1578947368421053 }, "end": { "tick": 6911, "seconds": 5.683388157894737 }, "notes_count": 226, "part_name": "Str.1 Posaunen" }, { "start": { "tick": 6912, "seconds": 5.68421052631579 }, "end": { "tick": 9983, "seconds": 8.209703947368421 }, "notes_count": 122, "part_name": "Pre 1 + Trp" }, { "start": { "tick": 9984, "seconds": 8.210526315789474 }, "end": { "tick": 14591, "seconds": 11.999177631578949 }, "notes_count": 112, "part_name": "Ref.1" }, { "start": { "tick": 14592, "seconds": 12.000000000000002 }, "end": { "tick": 16127, "seconds": 13.262335526315791 }, "notes_count": 28, "part_name": "Post 1 ohne Drum" }, { "start": { "tick": 16128, "seconds": 13.263157894736842 }, "end": { "tick": 19199, "seconds": 15.788651315789474 }, "notes_count": 28, "part_name": "Post 2 seitw�rts" }, { "start": { "tick": 19200, "seconds": 15.789473684210527 }, "end": { "tick": 22271, "seconds": 18.314967105263158 }, "notes_count": 170, "part_name": "Str.1 Posaunen" }, { "start": { "tick": 22272, "seconds": 18.315789473684212 }, "end": { "tick": 25343, "seconds": 20.841282894736842 }, "notes_count": 122, "part_name": "Pre 1" }, { "start": { "tick": 25344, "seconds": 20.842105263157897 }, "end": { "tick": 29951, "seconds": 24.63075657894737 }, "notes_count": 112, "part_name": "Ref.1" }, { "start": { "tick": 29952, "seconds": 24.63157894736842 }, "end": { "tick": 31487, "seconds": 25.893914473684212 }, "notes_count": 28, "part_name": "Post 1 ohne Drum" }, { "start": { "tick": 31488, "seconds": 25.894736842105264 }, "end": { "tick": 34559, "seconds": 28.420230263157897 }, "notes_count": 28, "part_name": "Post 2 seitw�rts" }, { "start": { "tick": 34560, "seconds": 28.42105263157895 }, "end": { "tick": 40703, "seconds": 33.47286184210527 }, "notes_count": 160, "part_name": "Ref.1" }] }] } },
+         "Im still standing": { "status": "success", "message": "Song loaded and ready", "version": 1, "details": { "name": "D:\\NFG\\NFG_Songs\\Uzepatscher 2025\\Songs\\Im Still Standing.tsn", "tempo": 188, "beatStyle": "BS_16tel", "track_count": 1, "tracks": [{ "name": "LED", "channel": 9, "parts_count": 16, "parts": [{ "start": { "tick": 768, "seconds": 0.5106382978723404 }, "end": { "tick": 7679, "seconds": 5.105718085106383 }, "notes_count": 132, "part_name": "Intro" }, { "start": { "tick": 7680, "seconds": 5.1063829787234045 }, "end": { "tick": 11519, "seconds": 7.658909574468085 }, "notes_count": 64, "part_name": "Str Posaune" }, { "start": { "tick": 11520, "seconds": 7.659574468085106 }, "end": { "tick": 15359, "seconds": 10.212101063829786 }, "notes_count": 98, "part_name": "Str mit Trp" }, { "start": { "tick": 15360, "seconds": 10.212765957446809 }, "end": { "tick": 21503, "seconds": 14.29720744680851 }, "notes_count": 112, "part_name": "Ref.1" }, { "start": { "tick": 21504, "seconds": 14.297872340425531 }, "end": { "tick": 24575, "seconds": 16.33976063829787 }, "notes_count": 60, "part_name": "Yea Yea" }, { "start": { "tick": 24576, "seconds": 16.340425531914892 }, "end": { "tick": 28415, "seconds": 18.892952127659573 }, "notes_count": 98, "part_name": "Str mit Pos" }, { "start": { "tick": 28416, "seconds": 18.893617021276594 }, "end": { "tick": 34559, "seconds": 22.9780585106383 }, "notes_count": 112, "part_name": "Ref.1" }, { "start": { "tick": 34560, "seconds": 22.97872340425532 }, "end": { "tick": 37631, "seconds": 25.02061170212766 }, "notes_count": 60, "part_name": "Yea Yea" }, { "start": { "tick": 37632, "seconds": 25.02127659574468 }, "end": { "tick": 39935, "seconds": 26.55252659574468 }, "notes_count": 16, "part_name": "Sing Yea Yea" }, { "start": { "tick": 39936, "seconds": 26.5531914893617 }, "end": { "tick": 42239, "seconds": 28.0844414893617 }, "notes_count": 16, "part_name": "Sing" }, { "start": { "tick": 42240, "seconds": 28.085106382978722 }, "end": { "tick": 44543, "seconds": 29.616356382978722 }, "notes_count": 16, "part_name": "Sing" }, { "start": { "tick": 44544, "seconds": 29.617021276595743 }, "end": { "tick": 46847, "seconds": 31.148271276595743 }, "notes_count": 16, "part_name": "Sing" }, { "start": { "tick": 46848, "seconds": 31.148936170212764 }, "end": { "tick": 49151, "seconds": 32.680186170212764 }, "notes_count": 16, "part_name": "Sing" }, { "start": { "tick": 49152, "seconds": 32.680851063829785 }, "end": { "tick": 51839, "seconds": 34.46742021276596 }, "notes_count": 60, "part_name": "Play Still Standing" }, { "start": { "tick": 51840, "seconds": 34.46808510638298 }, "end": { "tick": 53375, "seconds": 35.48869680851064 }, "notes_count": 40, "part_name": "Str Posaune" }, { "start": { "tick": 53376, "seconds": 35.48936170212766 }, "end": { "tick": 53759, "seconds": 35.744015957446805 }, "notes_count": 8, "part_name": "New" }] }] } },
+         "Killing in the Name": { "status": "success", "message": "Song loaded and ready", "version": 4, "details": { "name": "D:\\NFG\\NFG_Songs\\Uzepatscher 2025\\LED Songs\\Killing in the Name_v3_20250205_185918.tsn", "tempo": 92, "beatStyle": "BS_16tel", "track_count": 1, "tracks": [{ "name": "LED", "channel": 9, "parts_count": 14, "parts": [{ "start": { "tick": 768, "seconds": 1.0434782608695652 }, "end": { "tick": 3071, "seconds": 4.172554347826087 }, "notes_count": 56, "part_name": "Intro" }, { "start": { "tick": 3072, "seconds": 4.173913043478261 }, "end": { "tick": 4607, "seconds": 6.259510869565217 }, "notes_count": 12, "part_name": "schreien" }, { "start": { "tick": 4608, "seconds": 6.260869565217391 }, "end": { "tick": 6143, "seconds": 8.346467391304348 }, "notes_count": 30, "part_name": "ruhiger" }, { "start": { "tick": 6144, "seconds": 8.347826086956522 }, "end": { "tick": 9215, "seconds": 12.520380434782608 }, "notes_count": 42, "part_name": "Tuti drehen" }, { "start": { "tick": 9216, "seconds": 12.521739130434781 }, "end": { "tick": 10751, "seconds": 14.607336956521738 }, "notes_count": 16, "part_name": "Breaks" }, { "start": { "tick": 10752, "seconds": 14.608695652173912 }, "end": { "tick": 11519, "seconds": 15.650815217391305 }, "notes_count": 0, "part_name": "freeze" }, { "start": { "tick": 11520, "seconds": 15.652173913043478 }, "end": { "tick": 14591, "seconds": 19.824728260869566 }, "notes_count": 56, "part_name": "Drum Intro" }, { "start": { "tick": 14592, "seconds": 19.82608695652174 }, "end": { "tick": 16127, "seconds": 21.911684782608695 }, "notes_count": 30, "part_name": "Now you do.." }, { "start": { "tick": 16128, "seconds": 21.913043478260867 }, "end": { "tick": 17663, "seconds": 23.998641304347824 }, "notes_count": 14, "part_name": "Tuti 2" }, { "start": { "tick": 17664, "seconds": 24.0 }, "end": { "tick": 19199, "seconds": 26.085597826086957 }, "notes_count": 12, "part_name": "schreien" }, { "start": { "tick": 19200, "seconds": 26.08695652173913 }, "end": { "tick": 20735, "seconds": 28.172554347826086 }, "notes_count": 30, "part_name": "ruhiger" }, { "start": { "tick": 20736, "seconds": 28.17391304347826 }, "end": { "tick": 23807, "seconds": 32.346467391304344 }, "notes_count": 42, "part_name": "Tuti drehen" }, { "start": { "tick": 23808, "seconds": 32.34782608695652 }, "end": { "tick": 25343, "seconds": 34.43342391304348 }, "notes_count": 16, "part_name": "Breaks" }, { "start": { "tick": 25344, "seconds": 34.43478260869565 }, "end": { "tick": 26879, "seconds": 36.52038043478261 }, "notes_count": 2, "part_name": "Schluss" }] }] } },
+         "Leave a light on": { "status": "success", "message": "Song loaded and ready", "version": 14, "details": { "name": "D:\\NFG\\NFG_Songs\\Uzepatscher 2025\\LED Songs\\Leave a light on_v13_20250205_215444.tsn", "tempo": 138, "beatStyle": "BS_16tel", "track_count": 1, "tracks": [{ "name": "LED", "channel": 9, "parts_count": 13, "parts": [{ "start": { "tick": 768, "seconds": 0.6956521739130435 }, "end": { "tick": 2303, "seconds": 2.086050724637681 }, "notes_count": 16, "part_name": "Intro" }, { "start": { "tick": 2304, "seconds": 2.0869565217391304 }, "end": { "tick": 8447, "seconds": 7.651268115942029 }, "notes_count": 48, "part_name": "Str Posaunen" }, { "start": { "tick": 8448, "seconds": 7.6521739130434785 }, "end": { "tick": 11135, "seconds": 10.086050724637682 }, "notes_count": 24, "part_name": "Pre 1" }, { "start": { "tick": 11136, "seconds": 10.08695652173913 }, "end": { "tick": 17279, "seconds": 15.65126811594203 }, "notes_count": 96, "part_name": "Ref.1 Leave A Light On" }, { "start": { "tick": 17280, "seconds": 15.652173913043478 }, "end": { "tick": 23423, "seconds": 21.21648550724638 }, "notes_count": 94, "part_name": "Outro" }, { "start": { "tick": 23424, "seconds": 21.217391304347828 }, "end": { "tick": 24959, "seconds": 22.607789855072465 }, "notes_count": 40, "part_name": "letztes Leave A Light.." }, { "start": { "tick": 24960, "seconds": 22.608695652173914 }, "end": { "tick": 26495, "seconds": 23.99909420289855 }, "notes_count": 12, "part_name": "True North" }, { "start": { "tick": 26496, "seconds": 24.0 }, "end": { "tick": 29567, "seconds": 26.781702898550726 }, "notes_count": 14, "part_name": "True_Intro 2" }, { "start": { "tick": 29568, "seconds": 26.782608695652176 }, "end": { "tick": 32639, "seconds": 29.5643115942029 }, "notes_count": 110, "part_name": "True_Str." }, { "start": { "tick": 32640, "seconds": 29.565217391304348 }, "end": { "tick": 34175, "seconds": 30.955615942028984 }, "notes_count": 52, "part_name": "True_Pre 1" }, { "start": { "tick": 34176, "seconds": 30.956521739130434 }, "end": { "tick": 37631, "seconds": 34.08605072463768 }, "notes_count": 14, "part_name": "True_Pre 2" }, { "start": { "tick": 37632, "seconds": 34.08695652173913 }, "end": { "tick": 39935, "seconds": 36.17300724637681 }, "notes_count": 10, "part_name": "True_Ref." }, { "start": { "tick": 39936, "seconds": 36.17391304347826 }, "end": { "tick": 41855, "seconds": 37.91213768115942 }, "notes_count": 38, "part_name": "Outro" }] }] } },
+         "Spiel mir das Lied": { "status": "success", "message": "Song loaded and ready", "version": 1, "details": { "name": "D:\\NFG\\NFG_Songs\\Uzepatscher 2025\\LED Songs\\Spiel mir das Lied.tsn", "tempo": 87, "beatStyle": "BS_16tel", "track_count": 1, "tracks": [{ "name": "LED", "channel": 9, "parts_count": 10, "parts": [{ "start": { "tick": 0, "seconds": 0.0 }, "end": { "tick": 287, "seconds": 0.4123563218390805 }, "notes_count": 0, "part_name": "" }, { "start": { "tick": 864, "seconds": 1.2413793103448278 }, "end": { "tick": 3167, "seconds": 4.55028735632184 }, "notes_count": 48, "part_name": "Intro" }, { "start": { "tick": 3168, "seconds": 4.551724137931035 }, "end": { "tick": 8447, "seconds": 12.136494252873565 }, "notes_count": 62, "part_name": "mit Drums" }, { "start": { "tick": 8448, "seconds": 12.13793103448276 }, "end": { "tick": 14591, "seconds": 20.964080459770116 }, "notes_count": 96, "part_name": "neues Tempo " }, { "start": { "tick": 14592, "seconds": 20.965517241379313 }, "end": { "tick": 17663, "seconds": 25.377873563218394 }, "notes_count": 56, "part_name": "Trp Melodie" }, { "start": { "tick": 17664, "seconds": 25.37931034482759 }, "end": { "tick": 20735, "seconds": 29.79166666666667 }, "notes_count": 56, "part_name": "Kick mit Drums" }, { "start": { "tick": 20736, "seconds": 29.793103448275865 }, "end": { "tick": 22271, "seconds": 31.99856321839081 }, "notes_count": 28, "part_name": "Trp Melodie" }, { "start": { "tick": 22272, "seconds": 32.00000000000001 }, "end": { "tick": 24575, "seconds": 35.30890804597701 }, "notes_count": 48, "part_name": "3/4 tel Posaunen " }, { "start": { "tick": 24576, "seconds": 35.31034482758621 }, "end": { "tick": 27647, "seconds": 39.72270114942529 }, "notes_count": 56, "part_name": "Outro" }, { "start": { "tick": 27648, "seconds": 39.72413793103449 }, "end": { "tick": 28415, "seconds": 40.82614942528736 }, "notes_count": 16, "part_name": "Schluss" }] }] } },
+         "Valhalla": { "status": "success", "message": "Song loaded and ready", "version": 23, "details": { "name": "D:\\NFG\\NFG_Songs\\Uzepatscher 2025\\LED Songs\\Valhalla_v22_20250204_164043.tsn", "tempo": 195, "beatStyle": "BS_16tel", "track_count": 1, "tracks": [{ "name": "LED", "channel": 9, "parts_count": 10, "parts": [{ "start": { "tick": 768, "seconds": 0.49230769230769234 }, "end": { "tick": 3839, "seconds": 2.460897435897436 }, "notes_count": 38, "part_name": "Intro" }, { "start": { "tick": 3840, "seconds": 2.4615384615384617 }, "end": { "tick": 9983, "seconds": 6.399358974358974 }, "notes_count": 236, "part_name": "Str.1" }, { "start": { "tick": 9984, "seconds": 6.4 }, "end": { "tick": 16895, "seconds": 10.830128205128204 }, "notes_count": 124, "part_name": "Ref.1" }, { "start": { "tick": 16896, "seconds": 10.830769230769231 }, "end": { "tick": 19967, "seconds": 12.799358974358974 }, "notes_count": 56, "part_name": "Intro" }, { "start": { "tick": 19968, "seconds": 12.8 }, "end": { "tick": 26111, "seconds": 16.737820512820512 }, "notes_count": 236, "part_name": "Str.1" }, { "start": { "tick": 26112, "seconds": 16.73846153846154 }, "end": { "tick": 33023, "seconds": 21.168589743589745 }, "notes_count": 126, "part_name": "Ref.1" }, { "start": { "tick": 33024, "seconds": 21.16923076923077 }, "end": { "tick": 36095, "seconds": 23.137820512820515 }, "notes_count": 56, "part_name": "Intro" }, { "start": { "tick": 36096, "seconds": 23.138461538461538 }, "end": { "tick": 42239, "seconds": 27.07628205128205 }, "notes_count": 264, "part_name": "Bridge" }, { "start": { "tick": 42240, "seconds": 27.076923076923077 }, "end": { "tick": 45311, "seconds": 29.04551282051282 }, "notes_count": 48, "part_name": "Accoustic" }, { "start": { "tick": 45312, "seconds": 29.046153846153846 }, "end": { "tick": 49151, "seconds": 31.507051282051282 }, "notes_count": 70, "part_name": "Tuti" }] }] } },
+         "You know my Name": { "status": "success", "message": "Song loaded and ready", "version": 5, "details": { "name": "D:\\NFG\\NFG_Songs\\Uzepatscher 2025\\LED Songs\\You know my Name_v4_20250205_212032.tsn", "tempo": 224, "beatStyle": "BS_16tel", "track_count": 1, "tracks": [{ "name": "LED", "channel": 10, "parts_count": 8, "parts": [{ "start": { "tick": 768, "seconds": 0.42857142857142855 }, "end": { "tick": 6911, "seconds": 3.856584821428571 }, "notes_count": 44, "part_name": "Str 1" }, { "start": { "tick": 6912, "seconds": 3.8571428571428568 }, "end": { "tick": 9983, "seconds": 5.570870535714286 }, "notes_count": 44, "part_name": "Pre" }, { "start": { "tick": 9984, "seconds": 5.571428571428571 }, "end": { "tick": 16895, "seconds": 9.428013392857142 }, "notes_count": 60, "part_name": "Ref 1" }, { "start": { "tick": 16896, "seconds": 9.428571428571429 }, "end": { "tick": 23039, "seconds": 12.856584821428571 }, "notes_count": 28, "part_name": "Str. 2" }, { "start": { "tick": 23040, "seconds": 12.857142857142856 }, "end": { "tick": 29183, "seconds": 16.28515625 }, "notes_count": 126, "part_name": "Pre" }, { "start": { "tick": 29184, "seconds": 16.285714285714285 }, "end": { "tick": 36095, "seconds": 20.142299107142858 }, "notes_count": 28, "part_name": "Ref 2" }, { "start": { "tick": 36096, "seconds": 20.142857142857142 }, "end": { "tick": 42239, "seconds": 23.570870535714285 }, "notes_count": 44, "part_name": "Str 3" }, { "start": { "tick": 42240, "seconds": 23.57142857142857 }, "end": { "tick": 49151, "seconds": 27.428013392857142 }, "notes_count": 16, "part_name": "Outro" }] }] } },
+         "This Love": { "status": "success", "message": "Song loaded and ready", "version": 2, "details": { "name": "D:\\NFG\\NFG_Songs\\Uzepatscher 2025\\LED Songs\\This Love.tsn", "tempo": 190, "beatStyle": "BS_16tel", "track_count": 1, "tempoChanges": [], "tracks": [{ "name": "LED", "channel": 9, "parts_count": 17, "parts": [{ "start": { "tick": 0, "seconds": 0.0 }, "end": { "tick": 767, "seconds": 0.5046052631578948 }, "notes_count": 6, "part_name": "New" }, { "start": { "tick": 768, "seconds": 0.5052631578947369 }, "end": { "tick": 3839, "seconds": 2.525657894736842 }, "notes_count": 56, "part_name": "Intro" }, { "start": { "tick": 3840, "seconds": 2.526315789473684 }, "end": { "tick": 6911, "seconds": 4.546710526315789 }, "notes_count": 56, "part_name": "+ Trp" }, { "start": { "tick": 6912, "seconds": 4.5473684210526315 }, "end": { "tick": 13055, "seconds": 8.588815789473683 }, "notes_count": 132, "part_name": "Str.1 - Pos" }, { "start": { "tick": 13056, "seconds": 8.589473684210526 }, "end": { "tick": 16127, "seconds": 10.609868421052632 }, "notes_count": 110, "part_name": "Ref.1" }, { "start": { "tick": 16128, "seconds": 10.610526315789473 }, "end": { "tick": 19199, "seconds": 12.630921052631578 }, "notes_count": 112, "part_name": "Ref. Teil 2" }, { "start": { "tick": 19200, "seconds": 12.631578947368421 }, "end": { "tick": 22271, "seconds": 14.651973684210526 }, "notes_count": 56, "part_name": "Zwischenteil" }, { "start": { "tick": 22272, "seconds": 14.652631578947368 }, "end": { "tick": 25343, "seconds": 16.673026315789475 }, "notes_count": 66, "part_name": "Str.1 - Pos" }, { "start": { "tick": 25344, "seconds": 16.673684210526314 }, "end": { "tick": 28415, "seconds": 18.69407894736842 }, "notes_count": 66, "part_name": "+ Trp" }, { "start": { "tick": 28416, "seconds": 18.694736842105264 }, "end": { "tick": 31487, "seconds": 20.715131578947368 }, "notes_count": 110, "part_name": "Ref.1" }, { "start": { "tick": 31488, "seconds": 20.71578947368421 }, "end": { "tick": 34559, "seconds": 22.736184210526314 }, "notes_count": 112, "part_name": "Ref. Teil 2" }, { "start": { "tick": 34560, "seconds": 22.736842105263158 }, "end": { "tick": 37631, "seconds": 24.75723684210526 }, "notes_count": 56, "part_name": "Zwischenteil" }, { "start": { "tick": 37632, "seconds": 24.757894736842104 }, "end": { "tick": 43775, "seconds": 28.799342105263158 }, "notes_count": 592, "part_name": "Bridge" }, { "start": { "tick": 43776, "seconds": 28.8 }, "end": { "tick": 46847, "seconds": 30.820394736842104 }, "notes_count": 112, "part_name": "Ref.1" }, { "start": { "tick": 46848, "seconds": 30.821052631578947 }, "end": { "tick": 49919, "seconds": 32.84144736842105 }, "notes_count": 112, "part_name": "Ref. Teil 2" }, { "start": { "tick": 49920, "seconds": 32.8421052631579 }, "end": { "tick": 52991, "seconds": 34.8625 }, "notes_count": 112, "part_name": "Ref.1" }, { "start": { "tick": 52992, "seconds": 34.863157894736844 }, "end": { "tick": 55679, "seconds": 36.63092105263158 }, "notes_count": 98, "part_name": "Ref. Teil 2" }] }] } },
+         "Gossip": { "status": "success", "message": "Song loaded and ready", "version": 13, "details": { "name": "D:\\NFG\\NFG_Songs\\Uzepatscher 2025\\LED Songs\\Gossip_v12_20250204_182702.tsn", "tempo": 152, "beatStyle": "BS_16tel", "track_count": 1, "tempoChanges": [], "tracks": [{ "name": "LED", "channel": 9, "parts_count": 12, "parts": [{ "start": { "tick": 768, "seconds": 0.6315789473684211 }, "end": { "tick": 3839, "seconds": 3.1570723684210527 }, "notes_count": 58, "part_name": "Intro" }, { "start": { "tick": 3840, "seconds": 3.1578947368421053 }, "end": { "tick": 6911, "seconds": 5.683388157894737 }, "notes_count": 226, "part_name": "Str.1 Posaunen" }, { "start": { "tick": 6912, "seconds": 5.68421052631579 }, "end": { "tick": 9983, "seconds": 8.209703947368421 }, "notes_count": 122, "part_name": "Pre 1 + Trp" }, { "start": { "tick": 9984, "seconds": 8.210526315789474 }, "end": { "tick": 14591, "seconds": 11.999177631578949 }, "notes_count": 112, "part_name": "Ref.1" }, { "start": { "tick": 14592, "seconds": 12.000000000000002 }, "end": { "tick": 16127, "seconds": 13.262335526315791 }, "notes_count": 28, "part_name": "Post 1 ohne Drum" }, { "start": { "tick": 16128, "seconds": 13.263157894736842 }, "end": { "tick": 19199, "seconds": 15.788651315789474 }, "notes_count": 28, "part_name": "Post 2 seitw�rts" }, { "start": { "tick": 19200, "seconds": 15.789473684210527 }, "end": { "tick": 22271, "seconds": 18.314967105263158 }, "notes_count": 170, "part_name": "Str.1 Posaunen" }, { "start": { "tick": 22272, "seconds": 18.315789473684212 }, "end": { "tick": 25343, "seconds": 20.841282894736842 }, "notes_count": 122, "part_name": "Pre 1" }, { "start": { "tick": 25344, "seconds": 20.842105263157897 }, "end": { "tick": 29951, "seconds": 24.63075657894737 }, "notes_count": 112, "part_name": "Ref.1" }, { "start": { "tick": 29952, "seconds": 24.63157894736842 }, "end": { "tick": 31487, "seconds": 25.893914473684212 }, "notes_count": 28, "part_name": "Post 1 ohne Drum" }, { "start": { "tick": 31488, "seconds": 25.894736842105264 }, "end": { "tick": 34559, "seconds": 28.420230263157897 }, "notes_count": 28, "part_name": "Post 2 seitw�rts" }, { "start": { "tick": 34560, "seconds": 28.42105263157895 }, "end": { "tick": 40703, "seconds": 33.47286184210527 }, "notes_count": 160, "part_name": "Ref.1" }] }] } },
+         "California Dreaming": { "status": "success", "message": "Song loaded and ready", "version": 4, "details": { "name": "D:\\NFG\\NFG_Songs\\Uzepatscher 2025\\LED Songs\\California Dreaming.tsn", "tempo": 104, "beatStyle": "BS_16tel", "track_count": 1, "tempoChanges": [], "tracks": [{ "name": "LED", "channel": 9, "parts_count": 11, "parts": [{ "start": { "tick": 768, "seconds": 0.9230769230769229 }, "end": { "tick": 2303, "seconds": 2.768028846153846 }, "notes_count": 24, "part_name": "Intro" }, { "start": { "tick": 2304, "seconds": 2.7692307692307687 }, "end": { "tick": 8063, "seconds": 9.691105769230768 }, "notes_count": 112, "part_name": "Str. 1 Pos" }, { "start": { "tick": 8064, "seconds": 9.692307692307692 }, "end": { "tick": 9599, "seconds": 11.537259615384613 }, "notes_count": 30, "part_name": "Pre" }, { "start": { "tick": 9600, "seconds": 11.538461538461537 }, "end": { "tick": 15743, "seconds": 18.921874999999996 }, "notes_count": 128, "part_name": "Str. 2" }, { "start": { "tick": 15744, "seconds": 18.92307692307692 }, "end": { "tick": 21887, "seconds": 26.30649038461538 }, "notes_count": 128, "part_name": "Str. 3" }, { "start": { "tick": 21888, "seconds": 26.307692307692303 }, "end": { "tick": 24575, "seconds": 29.537259615384613 }, "notes_count": 80, "part_name": "Posaunen" }, { "start": { "tick": 24576, "seconds": 29.538461538461533 }, "end": { "tick": 25151, "seconds": 30.229567307692303 }, "notes_count": 16, "part_name": "Stop" }, { "start": { "tick": 25152, "seconds": 30.230769230769226 }, "end": { "tick": 28223, "seconds": 33.92187499999999 }, "notes_count": 56, "part_name": "Langsam" }, { "start": { "tick": 28224, "seconds": 33.92307692307692 }, "end": { "tick": 29759, "seconds": 35.76802884615384 }, "notes_count": 30, "part_name": "Speed Pos" }, { "start": { "tick": 29760, "seconds": 35.76923076923077 }, "end": { "tick": 34367, "seconds": 41.30649038461538 }, "notes_count": 96, "part_name": "Str. 4" }, { "start": { "tick": 34368, "seconds": 41.3076923076923 }, "end": { "tick": 40511, "seconds": 48.69110576923077 }, "notes_count": 128, "part_name": "Outro" }] }] } },
+         "Vois ton chemine": { "status": "success", "message": "Song loaded and ready", "version": 4, "details": { "name": "C:\\Users\\samue\\Documents\\OneDrive - Privat\\OneDrive\\transfer\\lichtshow\\Vois sur ton chemin - V2.tsn", "tempo": 136, "beatStyle": "BS_16tel", "track_count": 1, "tempoChanges": [], "tracks": [{ "name": "LED", "channel": 9, "parts_count": 3, "parts": [{ "start": { "tick": 768, "seconds": 0.7058823529411764 }, "end": { "tick": 3839, "seconds": 3.5284926470588234 }, "notes_count": 40, "part_name": "Pre" }, { "start": { "tick": 3840, "seconds": 3.5294117647058822 }, "end": { "tick": 7679, "seconds": 7.057904411764706 }, "notes_count": 60, "part_name": "Pre Melodie" }, { "start": { "tick": 7680, "seconds": 7.0588235294117645 }, "end": { "tick": 19199, "seconds": 17.64613970588235 }, "notes_count": 24, "part_name": "Melodie" }] }] } }
+      } // Will contain song load responses
+
+      const app = createApp({
+         components: {
+            'nano-card': NanoCard
+         },
+         data () {
+            return {
+               isConnected: true, // Always connected in simulation
+               selectedSongTitle: 'Wähle ein Song',
+               loadingStatus: {
+                  show: false,
+                  text: ''
+               },
+               showPlayButton: false,
+               showNextButton: false,
+               showStopButton: false,
+               showSidebar: true,
+               songs: MOCK_SONGS.songs,
+               nanos: {},
+               activeLabel: localStorage.getItem('selectedLabel') || 'Alle',
+               lastTick: null,
+               lastTickTime: null,
+               ticksPerSecond: null,
+               simulationInterval: null,
+               currentTick: 0,
+               currentSongDetails: null,
+               isPlaying: false
+            }
+         },
+
+         methods: {
+            connectWebSocket () {
+               this.isConnected = true
+            },
+
+            async fetchSongs () {
+               // Use mock data instead of API call
+               this.songs = MOCK_SONGS.songs
+            },
+
+            async loadSong (songName) {
+               this.loadingStatus.show = true
+               this.loadingStatus.text = 'LADEN...'
+               this.selectedSongTitle = songName
+
+               // Simulate loading delay
+               setTimeout(() => {
+                  this.loadingStatus.text = 'GELADEN!'
+                  this.showPlayButton = true
+                  this.showNextButton = true
+                  this.showStopButton = false
+
+                  // Store current song details for playback
+                  this.currentSongDetails = MOCK_SONG_DETAILS[songName].details
+                  this.displayTimeline(this.currentSongDetails.tracks)
+               }, 500)
+            },
+
+            playSong () {
+               if (!this.currentSongDetails) return
+
+               this.isPlaying = true
+               this.showPlayButton = false
+               this.showStopButton = true
+
+               // Start from the first part
+               const firstPart = this.currentSongDetails.tracks[0].parts[0]
+               this.currentTick = firstPart.start.tick
+
+               // Calculate tick interval based on tempo (BPM) and PPQ=96
+               const tempo = this.currentSongDetails.tempo
+               const PPQ = 96 // Pulses Per Quarter Note
+               const millisecondsPerTick = (60000 / tempo) / PPQ // Convert BPM to ms per tick
+
+               // Start simulation
+               this.simulationInterval = setInterval(() => {
+                  this.currentTick++
+                  this.updateTimelineProgress(this.currentTick)
+
+                  // Check if we reached the end of the song
+                  const lastPart = this.currentSongDetails.tracks[0].parts.slice(-1)[0]
+                  if (this.currentTick >= lastPart.end.tick) {
+                     this.stopSong()
+                  }
+               }, millisecondsPerTick)
+            },
+
+            stopSong () {
+               clearInterval(this.simulationInterval)
+               this.isPlaying = false
+               this.currentTick = 0
+               this.showPlayButton = true
+               this.showStopButton = false
+               this.updateTimelineProgress(0)
+            },
+
+            handleNext () {
+               if (!this.currentSongDetails || !this.isPlaying) return
+
+               // Find current part
+               const parts = this.currentSongDetails.tracks[0].parts
+               let currentPart = null
+               let currentPartIndex = -1
+
+               for (let i = 0; i < parts.length; i++) {
+                  const part = parts[i]
+                  if (this.currentTick >= part.start.tick && this.currentTick <= part.end.tick) {
+                     currentPart = part
+                     currentPartIndex = i
+                     break
+                  }
+               }
+
+               if (!currentPart) return
+
+               // Calculate position within current part
+               const partDuration = currentPart.end.tick - currentPart.start.tick
+               const positionInPart = this.currentTick - currentPart.start.tick
+               const partProgress = positionInPart / partDuration
+
+               if (partProgress < 1 / 3) {
+                  // Wenn im ersten Drittel, springe zum Anfang des aktuellen Parts
+                  this.currentTick = currentPart.start.tick
+               } else {
+                  // Wenn in den letzten zwei Dritteln, springe zum nächsten Part
+                  if (currentPartIndex < parts.length - 1) {
+                     this.currentTick = parts[currentPartIndex + 1].start.tick
+                  } else {
+                     // Wenn es der letzte Part ist, stoppe die Wiedergabe
+                     this.stopSong()
+                     return
+                  }
+               }
+
+               // Update der Anzeige ohne die Wiedergabe zu stoppen
+               this.updateTimelineProgress(this.currentTick)
+            },
+
+            displayTimeline (tracks) {
+               const timeline = document.getElementById('timeline')
+               timeline.innerHTML = ''
+
+               let maxDuration = 0
+               tracks.forEach(track => {
+                  track.parts.forEach(part => {
+                     const duration = part.end.seconds - part.start.seconds
+                     maxDuration = Math.max(maxDuration, duration)
+                  })
+               })
+
+               tracks.forEach(track => {
+                  track.parts.forEach(part => {
+                     const duration = part.end.seconds - part.start.seconds
+                     const width = Math.min(((duration / maxDuration) * 100), 100).toFixed(1)
+                     const partElement = document.createElement('div')
+                     partElement.className = 'bg-blue-500 h-8 rounded text-white p-1 relative overflow-hidden cursor-pointer'
+                     partElement.style.width = `${width}%`
+                     partElement.setAttribute('data-start-tick', part.start.tick)
+                     partElement.setAttribute('data-end-tick', part.end.tick)
+
+                     // Add progress indicator
+                     const progressIndicator = document.createElement('div')
+                     progressIndicator.className = 'absolute top-0 left-0 bottom-0 w-1 bg-yellow-300 hidden'
+                     progressIndicator.style.transition = 'left 0.1s linear'
+                     partElement.appendChild(progressIndicator)
+
+                     // Add one-third marker line
+                     const oneThirdMarker = document.createElement('div')
+                     oneThirdMarker.className = 'absolute top-0 bottom-0 border-l-2 border-white border-dashed'
+                     oneThirdMarker.style.left = '33.33%'
+                     oneThirdMarker.title = 'Before this line: Jump to start\nAfter this line: Jump to next part'
+                     partElement.appendChild(oneThirdMarker)
+
+                     // Add text content
+                     const textContent = document.createElement('span')
+                     textContent.className = 'relative z-10'
+                     textContent.textContent = `${part.part_name} (${part.start.tick}-${part.end.tick})`
+                     partElement.appendChild(textContent)
+
+                     // Add click handler for jumping to part
+                     partElement.addEventListener('click', () => {
+                        this.currentTick = part.start.tick
+                        this.updateTimelineProgress(this.currentTick)
+
+                        // If not playing, start playback
+                        if (!this.isPlaying) {
+                           this.playSong()
+                        }
+                     })
+
+                     timeline.appendChild(partElement)
+                  })
+               })
+            },
+
+            updateTimelineProgress (tick) {
+               const parts = document.querySelectorAll('#timeline > div')
+
+               parts.forEach(part => {
+                  const startTick = parseInt(part.getAttribute('data-start-tick'))
+                  const endTick = parseInt(part.getAttribute('data-end-tick'))
+                  const progressIndicator = part.querySelector('div')
+
+                  if (tick >= startTick && tick <= endTick) {
+                     // Highlight current part
+                     part.classList.remove('bg-blue-500')
+                     part.classList.add('bg-red-500')
+
+                     // Update progress indicator
+                     progressIndicator.classList.remove('hidden')
+                     const progress = (tick - startTick) / (endTick - startTick)
+                     progressIndicator.style.left = `${progress * 100}%`
+                  } else {
+                     // Reset part styling
+                     part.classList.remove('bg-red-500')
+                     part.classList.add('bg-blue-500')
+                     progressIndicator.classList.add('hidden')
+                  }
+               })
+            },
+
+            setLabelFilter (label) {
+               this.activeLabel = label
+               localStorage.setItem('selectedLabel', label)
+            },
+
+            async fetchCurrentSong () {
+               try {
+                  const response = await fetch('/songs/current')
+                  const data = await response.json()
+                  console.log(data)
+
+                  if (data.status === 'success' && data.details) {
+                     this.selectedSongTitle = data.details.name
+
+                     if (data.details.tracks) {
+                        this.loadingStatus.text = 'GELADEN!'
+                        this.showPlayButton = true
+                        this.showNextButton = true
+                        this.showStopButton = true
+                        setTimeout(() => {
+                           this.displayTimeline(data.details.tracks)
+                        }, 100)
+                     }
+                  }
+               } catch (error) {
+                  console.error('Error fetching current song:', error)
+               }
+            }
+         },
+
+         computed: {
+            filteredSongs () {
+               if (this.activeLabel === 'Alle') {
+                  return this.songs
+               } else {
+                  return this.songs.filter(song => song.label === this.activeLabel)
+               }
+            }
+         },
+
+         mounted () {
+            this.connectWebSocket()
+            this.fetchSongs()
+         }
+      })
+
+      app.mount('#app')
+   </script>
+</body>
+
+</html>

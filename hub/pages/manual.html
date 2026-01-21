@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+   <meta charset="UTF-8">
+   <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+   >
+   <title>SHOWTOOL</title>
+   <script src="static/tailwind.js"></script>
+   <link
+      href="static/flowbite.css"
+      rel="stylesheet"
+   />
+   <script src="static/vue.js"></script>
+</head>
+
+<body class="bg-gray-100 h-screen p-4">
+   <div
+      id="app"
+      class="antialiased bg-gray-50"
+      v-cloak
+   >
+      <nav class="bg-white border-b border-gray-200 px-4 py-2.5 fixed left-0 right-0 top-0 z-50">
+         <div class="flex flex-wrap justify-between items-center">
+            <div class="flex justify-start items-center">
+               <h1 class="text-3xl font-bold pr-8">MANUELLE SHOW</h1>
+               <div>
+                  <span
+                     id="online-status"
+                     class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-green-800 bg-green-100 rounded"
+                     :class="{'opacity-100': isConnected, 'opacity-10': !isConnected}"
+                  >
+                     Online
+                  </span>
+                  <span
+                     id="offline-status"
+                     class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-red-800 bg-red-100 rounded"
+                     :class="{'opacity-100': !isConnected, 'opacity-10': isConnected}"
+                  >
+                     Offline
+                  </span>
+               </div>
+            </div>
+         </div>
+      </nav>
+
+      <main class="p-4 h-auto pt-20">
+         <div class="flex justify-between items-center mb-8">
+            <button
+               class="bg-blue-500 text-white px-4 py-2 rounded"
+               onclick="window.history.back();"
+            >
+               Zurück
+            </button>
+         </div>
+
+         <!-- Global Color Control -->
+         <div class="mb-8">
+            <h3 class="text-xl font-bold mb-4">Globale Farbsteuerung</h3>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
+               <div class="flex gap-4 items-center">
+                  <div
+                     class="w-24 h-24 rounded-lg"
+                     :style="{ backgroundColor: `rgb(${red}, ${green}, ${blue})` }"
+                  ></div>
+                  <div class="flex flex-col gap-4">
+                     <div class="flex items-center">
+                        <label class="w-20">Rot:</label>
+                        <input
+                           type="range"
+                           v-model="red"
+                           min="0"
+                           max="255"
+                           class="w-48"
+                        >
+                        <input
+                           type="number"
+                           v-model="red"
+                           min="0"
+                           max="255"
+                           class="w-24 ml-2"
+                        >
+                     </div>
+                     <div class="flex items-center">
+                        <label class="w-20">Grün:</label>
+                        <input
+                           type="range"
+                           v-model="green"
+                           min="0"
+                           max="255"
+                           class="w-48"
+                        >
+                        <input
+                           type="number"
+                           v-model="green"
+                           min="0"
+                           max="255"
+                           class="w-24 ml-2"
+                        >
+                     </div>
+                     <div class="flex items-center">
+                        <label class="w-20">Blau:</label>
+                        <input
+                           type="range"
+                           v-model="blue"
+                           min="0"
+                           max="255"
+                           class="w-48"
+                        >
+                        <input
+                           type="number"
+                           v-model="blue"
+                           min="0"
+                           max="255"
+                           class="w-24 ml-2"
+                        >
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+
+         <!-- Manual Effects -->
+         <div class="mb-8">
+            <h3 class="text-xl font-bold mb-4">Manuelle Effekte</h3>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
+               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div
+                     v-for="effect in manualEffects"
+                     :key="effect.id"
+                     class="p-4 border rounded-lg"
+                  >
+                     <h4 class="font-bold mb-2">{{ effect.name }}</h4>
+                     <p class="text-sm text-gray-600 mb-2">{{ effect.description }}</p>
+                     <div class="flex flex-col gap-2">
+                        <div
+                           v-if="effect.hasIntensity"
+                           class="flex items-center"
+                        >
+                           <label class="w-24">Intensität:</label>
+                           <input
+                              type="range"
+                              v-model="intensity"
+                              min="0"
+                              max="100"
+                              class="flex-1"
+                           >
+                        </div>
+                        <div
+                           v-if="effect.hasSpeed"
+                           class="flex items-center"
+                        >
+                           <label class="w-24">Geschwindigkeit:</label>
+                           <input
+                              type="range"
+                              v-model="speed"
+                              min="0"
+                              max="100"
+                              class="flex-1"
+                           >
+                        </div>
+                        <div
+                           v-if="effect.hasLength"
+                           class="flex items-center"
+                        >
+                           <label class="w-24">Länge:</label>
+                           <input
+                              type="number"
+                              v-model="length"
+                              min="1"
+                              class="w-20"
+                           >
+                        </div>
+                        <button
+                           class="bg-blue-500 text-white px-4 py-2 rounded mt-2"
+                           @click="sendEffect(effect.id)"
+                        >
+                           Effekt anwenden
+                        </button>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+
+         <!-- Effect Controls -->
+         <div class="mb-8">
+            <h3 class="text-xl font-bold mb-4">Effektsteuerung</h3>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
+               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div
+                     v-for="effect in effects"
+                     :key="effect.id"
+                     class="p-4 border rounded-lg"
+                  >
+                     <h4 class="font-bold mb-2">{{ effect.name }}</h4>
+                     <p class="text-sm text-gray-600 mb-2">{{ effect.description }}</p>
+                     <div class="flex flex-col gap-2">
+                        <div
+                           v-if="effect.hasIntensity"
+                           class="flex items-center"
+                        >
+                           <label class="w-24">Intensität:</label>
+                           <input
+                              type="range"
+                              v-model="intensity"
+                              min="0"
+                              max="100"
+                              class="flex-1"
+                           >
+                        </div>
+                        <div
+                           v-if="effect.hasDuration"
+                           class="flex items-center"
+                        >
+                           <label class="w-24">Dauer:</label>
+                           <input
+                              type="number"
+                              v-model="duration"
+                              min="0"
+                              class="w-20"
+                           >
+                        </div>
+                        <div
+                           v-if="effect.hasSpeed"
+                           class="flex items-center"
+                        >
+                           <label class="w-24">Geschwindigkeit:</label>
+                           <input
+                              type="range"
+                              v-model="speed"
+                              min="0"
+                              max="100"
+                              class="flex-1"
+                           >
+                        </div>
+                        <div
+                           v-if="effect.hasLength"
+                           class="flex items-center"
+                        >
+                           <label class="w-24">Länge:</label>
+                           <input
+                              type="number"
+                              v-model="length"
+                              min="1"
+                              class="w-20"
+                           >
+                        </div>
+                        <button
+                           class="bg-blue-500 text-white px-4 py-2 rounded mt-2"
+                           @click="sendEffect(effect.id)"
+                        >
+                           Effekt anwenden
+                        </button>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+
+         <!-- System Commands -->
+         <div class="mb-8">
+            <h3 class="text-xl font-bold mb-4">Systembefehle</h3>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
+               <div class="flex gap-4">
+                  <button
+                     class="bg-red-500 text-white px-4 py-2 rounded"
+                     @click="sendEffect(100)"
+                  >
+                     Ausschalten
+                  </button>
+                  <button
+                     class="bg-yellow-500 text-white px-4 py-2 rounded"
+                     @click="sendEffect(110)"
+                  >
+                     Initialisieren
+                  </button>
+                  <button
+                     class="bg-yellow-500 text-white px-4 py-2 rounded"
+                     @click="sendEffect(101)"
+                  >
+                     Standby
+                  </button>
+                  <button
+                     class="bg-green-500 text-white px-4 py-2 rounded"
+                     @click="sendEffect(102)"
+                  >
+                     Active Standby
+                  </button>
+               </div>
+            </div>
+         </div>
+      </main>
+   </div>
+
+
+   <script src="./static/flowbite.min.js"></script>
+
+   <script type="module">
+      const { createApp } = Vue
+
+      const app = createApp({
+         data () {
+            return {
+               environment: localStorage.getItem('environment') || 'samuels-macbook-pro.local:8000',
+               isConnected: false,
+               socket: null,
+               // Color controls
+               red: 255,
+               green: 255,
+               blue: 255,
+               // Effect controls
+               intensity: 100,
+               duration: 15,
+               speed: 20,
+               length: 1,
+               rainbow: 0,
+               // Effect definitions
+               effects: [
+                  { id: 103, name: 'RGB', description: 'Set all LEDs to specified RGB color', hasIntensity: true },
+                  { id: 104, name: 'Rainbow', description: 'Configurable rainbow effect', hasSpeed: true, hasLength: true },
+                  { id: 105, name: 'Blink', description: 'Blink individual LEDs', hasSpeed: true, hasLength: true },
+                  // { id: 106, name: 'Single LED', description: 'Set individual LED', hasLength: true },
+                  // { id: 107, name: 'Additional LED', description: 'Set additional LED (must follow Single LED)', hasLength: true },
+               ],
+               // Manual Effects
+               manualEffects: [
+                  {
+                     id: 30,
+                     name: 'Running Light',
+                     description: 'Moving light pattern with configurable group size',
+                     hasLength: true,
+                     hasIntensity: true,
+                     hasSpeed: true
+                  },
+                  {
+                     id: 31,
+                     name: 'Glitter',
+                     description: 'Random sparkling effect with speed control',
+                     hasSpeed: true,
+                     hasIntensity: true
+                  },
+                  {
+                     id: 32,
+                     name: 'Wave',
+                     description: 'Wave pattern with edge dimming',
+                     hasLength: true,
+                     hasIntensity: true,
+                     hasSpeed: true
+                  },
+                  {
+                     id: 33,
+                     name: 'Pulsate',
+                     description: 'Smooth pulsating effect',
+                     hasIntensity: true
+                  },
+                  {
+                     id: 35,
+                     name: 'Strobo',
+                     description: 'Strobe light effect',
+                     hasIntensity: true
+                  },
+                  {
+                     id: 37,
+                     name: 'Heartbeat',
+                     description: 'Realistic heartbeat pattern',
+                     hasIntensity: true
+                  },
+                  {
+                     id: 38,
+                     name: 'Meteor',
+                     description: 'Meteor effect with configurable length',
+                     hasLength: true,
+                     hasIntensity: true
+                  },
+                  {
+                     id: 39,
+                     name: 'Flicker',
+                     description: 'Candlelight flicker effect',
+                     hasIntensity: true
+                  },
+                  {
+                     id: 40,
+                     name: 'Comet',
+                     description: 'Comet with bright head and fading tail',
+                     hasLength: true,
+                     hasIntensity: true
+                  },
+                  {
+                     id: 41,
+                     name: 'Doppler',
+                     description: 'Doppler effect with color shift',
+                     hasLength: true,
+                     hasIntensity: true
+                  },
+                  {
+                     id: 42,
+                     name: 'Firework',
+                     description: 'Firework explosion effect',
+                     hasIntensity: true
+                  },
+                  {
+                     id: 43,
+                     name: 'DNA Helix',
+                     description: 'Double helix pattern',
+                     hasLength: true,
+                     hasIntensity: true
+                  }
+               ]
+            }
+         },
+
+         methods: {
+            connectWebSocket () {
+               this.socket = new WebSocket(`ws://${this.environment}/ws`)
+
+               this.socket.addEventListener('open', () => {
+                  this.isConnected = true
+               })
+
+               this.socket.addEventListener('close', () => {
+                  this.isConnected = false
+                  setTimeout(() => this.connectWebSocket(), 5000)
+               })
+            },
+
+            sendEffect (effectId) {
+               const command = {
+                  effect: Number(effectId),
+                  duration: Number(this.duration),
+                  intensity: Number(this.intensity),
+                  red: Number(this.red),
+                  green: Number(this.green),
+                  blue: Number(this.blue),
+                  rainbow: Number(this.rainbow),
+                  speed: Number(this.speed),
+                  length: Number(this.length)
+               }
+
+               fetch(`http://${this.environment}/command`, {
+                  method: 'POST',
+                  headers: {
+                     'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(command)
+               })
+            }
+         },
+
+         mounted () {
+            this.connectWebSocket()
+         }
+      })
+
+      app.mount('#app')
+   </script>
+</body>
+
+</html>

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+   <meta charset="UTF-8">
+   <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+   >
+   <title>DANGER ZONE</title>
+   <script src="static/tailwind.js"></script>
+   <link
+      href="static/flowbite.css"
+      rel="stylesheet"
+   />
+   <script src="static/vue.js"></script>
+</head>
+
+<body class="bg-red-500 h-screen p-4">
+   <div
+      id="app"
+      class="antialiased"
+      v-cloak
+   >
+      <nav class="bg-red-700 px-4 py-2.5 fixed left-0 right-0 top-0 z-50">
+         <div class="flex flex-wrap justify-between items-center">
+            <div class="flex justify-start items-center">
+               <h1 class="text-3xl font-bold pr-8">DANGERZONE!</h1>
+            </div>
+         </div>
+      </nav>
+
+      <main class="p-4 h-auto pt-20">
+         <div class="flex justify-between items-center mb-8">
+            <button
+               class="bg-white text-black px-4 py-2 rounded"
+               onclick="window.history.back();"
+            >
+               Zurück
+            </button>
+         </div>
+
+         <div class="flex items-center gap-4 mt-32 mb-32">
+            <a
+               class="bg-red-400 text-black px-4 py-2 rounded"
+               href="http://hub.local:8080/sys/logs"
+               target="_blank"
+            >
+               Logs
+            </a>
+
+            <a
+               class="bg-red-400 text-black px-4 py-2 rounded"
+               href="http://hub.local:8080/sys/restart"
+               target="_blank"
+            >
+               Restart Service
+            </a>
+         </div>
+
+         <div class="flex items-center gap-4 mt-16 mb-8">
+            <a
+               class="bg-red-800 text-white px-4 py-2 rounded"
+               href="http://hub.local:8080/sys/update"
+               target="_blank"
+            >
+               Update
+            </a>
+            <a
+               class="bg-red-800 text-white px-4 py-2 rounded"
+               href="http://hub.local:8080/sys/reboot"
+               target="_blank"
+            >
+               Reboot
+            </a>
+            <a
+               class="bg-red-800 text-white px-4 py-2 rounded"
+               href="http://hub.local:8080/sys/shutdown"
+               target="_blank"
+            >
+               Shutdown
+            </a>
+         </div>
+
+
+      </main>
+   </div>
+
+
+   <script src="./static/flowbite.min.js"></script>
+
+   <script type="module">
+      const { createApp } = Vue
+
+      const app = createApp({
+         data () {
+            return {
+               environment: localStorage.getItem('environment') || 'samuels-macbook-pro.local:8000',
+               isConnected: false,
+               socket: null,
+               selectedFile: null,
+               songName: '',
+               uploadType: 'new',
+               existingSongs: [],
+               songs: [],
+               showArchived: false,
+               isDragging: false,
+               draggedElement: null,
+               originalOrder: null,
+            }
+         },
+
+         computed: {
+            isUploadValid () {
+               return this.selectedFile && this.songName.trim()
+            },
+            sortedSongs () {
+               return [...this.songs].sort((a, b) => {
+                  return (a.order || 0) - (b.order || 0)
+               })
+            }
+         },
+
+         methods: {
+            connectWebSocket () {
+               this.socket = new WebSocket(`ws://${this.environment}/ws`)
+               this.socket.addEventListener('open', () => {
+                  this.isConnected = true
+               })
+               this.socket.addEventListener('close', () => {
+                  this.isConnected = false
+                  setTimeout(() => this.connectWebSocket(), 5000)
+               })
+            },
+
+            handleFileSelect (event) {
+               this.selectedFile = event.target.files[0]
+            },
+
+            async loadExistingSongs () {
+               try {
+                  const response = await fetch('/songs')
+                  const data = await response.json()
+                  this.existingSongs = data.songs.map(song => song.name)
+               } catch (error) {
+                  console.error('Failed to load songs:', error)
+               }
+            },
+
+            async uploadSong () {
+               if (!this.isUploadValid) {
+                  alert('Please fill in all fields')
+                  return
+               }
+
+               try {
+                  const fileContent = await this.selectedFile.text()
+                  const myHeaders = new Headers()
+                  myHeaders.append("Content-Type", "text/plain")
+
+                  const requestOptions = {
+                     method: "POST",
+                     headers: myHeaders,
+                     body: fileContent,
+                     redirect: "follow"
+                  }
+
+                  const endpoint = this.uploadType === 'new'
+                     ? `http://${this.environment}/songs/import/${this.songName}`
+                     : `http://${this.environment}/songs/import/${this.songName}`
+
+                  const response = await fetch(endpoint, requestOptions)
+                  const result = await response.text()
+                  console.log(result)
+
+                  // Reset form
+                  this.selectedFile = null
+                  this.songName = ''
+                  document.getElementById('tsnFile').value = ''
+
+                  alert('Song uploaded successfully!')
+                  location.reload()
+
+                  // Reload songs list if we're in update mode
+                  if (this.uploadType === 'update') {
+                     await this.loadExistingSongs()
+                  }
+               } catch (error) {
+                  console.error(error)
+                  alert('Upload failed')
+               }
+            },
+
+            async loadSongs () {
+               try {
+                  const response = await fetch(`/songs?archived=${this.showArchived}`)
+                  const data = await response.json()
+                  this.songs = data.songs
+               } catch (error) {
+                  console.error('Failed to load songs:', error)
+               }
+            },
+
+            async toggleLabel (songName, label) {
+               try {
+                  const response = await fetch(`http://${this.environment}/songs/${songName}/label`, {
+                     method: 'PUT',
+                     headers: {
+                        'Content-Type': 'text/plain'
+                     },
+                     body: label
+                  })
+
+                  if (response.ok) {
+                     // Update the local state
+                     const song = this.songs.find(s => s.name === songName)
+                     if (song) {
+                        song.label = song.label === label ? '' : label
+                     }
+                  }
+               } catch (error) {
+                  console.error('Failed to update label:', error)
+               }
+            },
+
+            async archiveSong (songName) {
+               if (!confirm(`Are you sure you want to archive "${songName}"?`)) {
+                  return
+               }
+
+               try {
+                  const response = await fetch(`http://${this.environment}/songs/${songName}`, {
+                     method: 'DELETE'
+                  })
+
+                  if (response.ok) {
+                     await this.loadSongs()
+                  } else {
+                     throw new Error('Failed to archive song')
+                  }
+               } catch (error) {
+                  console.error('Failed to archive song:', error)
+                  alert('Failed to archive song')
+               }
+            },
+
+            async unarchiveSong (songName) {
+               if (!confirm(`Are you sure you want to unarchive "${songName}"?`)) {
+                  return
+               }
+
+               try {
+                  const response = await fetch(`http://${this.environment}/songs/${songName}/unarchive`, {
+                     method: 'POST'
+                  })
+
+                  if (response.ok) {
+                     await this.loadSongs()
+                  } else {
+                     throw new Error('Failed to unarchive song')
+                  }
+               } catch (error) {
+                  console.error('Failed to unarchive song:', error)
+                  alert('Failed to unarchive song')
+               }
+            },
+
+            dragStart (e) {
+               this.isDragging = true
+               this.draggedElement = e.currentTarget
+               this.draggedElement.classList.add('bg-gray-100')
+               this.originalOrder = [...document.querySelectorAll('#sortable-songs tr')]
+                  .map(row => row.dataset.songName)
+            },
+
+            dragMove (e) {
+               if (!this.isDragging) return
+
+               const rows = document.querySelectorAll('#sortable-songs tr')
+               const draggedRect = this.draggedElement.getBoundingClientRect()
+               const draggedMiddle = draggedRect.top + draggedRect.height / 2
+
+               rows.forEach(row => {
+                  if (row === this.draggedElement) return
+
+                  const rect = row.getBoundingClientRect()
+                  if (e.clientY < rect.bottom && e.clientY > rect.top) {
+                     if (draggedMiddle < rect.top) {
+                        row.parentNode.insertBefore(this.draggedElement, row)
+                     } else {
+                        row.parentNode.insertBefore(this.draggedElement, row.nextSibling)
+                     }
+                  }
+               })
+            },
+
+            async dragEnd () {
+               if (!this.isDragging) return
+               this.isDragging = false
+               this.draggedElement.classList.remove('bg-gray-100')
+
+               const newOrder = [...document.querySelectorAll('#sortable-songs tr')]
+                  .map((row, index) => [row.dataset.songName, index + 1])
+
+               // Update order in backend
+               try {
+                  const orderData = Object.fromEntries(newOrder)
+                  await fetch(`http://${this.environment}/songs/order`, {
+                     method: 'PUT',
+                     headers: {
+                        'Content-Type': 'application/json',
+                     },
+                     body: JSON.stringify(orderData)
+                  })
+
+                  // Update local song data with new orders
+                  this.songs.forEach(song => {
+                     song.order = orderData[song.name]
+                  })
+               } catch (error) {
+                  console.error('Failed to update song order:', error)
+                  // Revert to original order if update fails
+                  const tbody = document.querySelector('#sortable-songs')
+                  this.originalOrder.forEach(songName => {
+                     const row = [...tbody.children].find(r => r.dataset.songName === songName)
+                     tbody.appendChild(row)
+                  })
+               }
+
+               this.draggedElement = null
+               this.originalOrder = null
+            }
+         },
+
+         watch: {
+            showArchived (newValue) {
+               this.loadSongs()
+            }
+         },
+
+         mounted () {
+            this.connectWebSocket()
+            this.loadExistingSongs()
+            this.loadSongs()
+         }
+      })
+
+      app.mount('#app')
+   </script>
+</body>
+
+</html>

@@ -1,0 +1,431 @@
+{
+  "AC:15:18:E4:C9:48": {
+    "mac": "AC:15:18:E4:C9:48",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": "2",
+    "led_count": 0,
+    "position": {
+      "x": 200,
+      "y": 175
+    }
+  },
+  "AC:15:18:E6:68:14": {
+    "mac": "AC:15:18:E6:68:14",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": "9",
+    "led_count": 0,
+    "position": {
+      "x": 350,
+      "y": 25
+    }
+  },
+  "4C:11:AE:B3:53:7C": {
+    "mac": "4C:11:AE:B3:53:7C",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": "12",
+    "led_count": 0,
+    "position": {
+      "x": 300,
+      "y": 125
+    }
+  },
+  "88:13:BF:68:CF:34": {
+    "mac": "88:13:BF:68:CF:34",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": "2",
+    "led_count": 0,
+    "position": {
+      "x": 150,
+      "y": 200
+    }
+  },
+  "88:13:BF:68:AA:64": {
+    "mac": "88:13:BF:68:AA:64",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 75,
+      "y": 175
+    }
+  },
+  "88:13:BF:68:B9:44": {
+    "mac": "88:13:BF:68:B9:44",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": "8",
+    "led_count": 0,
+    "position": {
+      "x": 425,
+      "y": 200
+    }
+  },
+  "AC:15:18:E6:34:B4": {
+    "mac": "AC:15:18:E6:34:B4",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 50,
+      "y": 200
+    }
+  },
+  "88:13:BF:6A:2C:58": {
+    "mac": "88:13:BF:6A:2C:58",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": "9",
+    "led_count": 0,
+    "position": {
+      "x": 450,
+      "y": 25
+    }
+  },
+  "88:13:BF:68:D4:F8": {
+    "mac": "88:13:BF:68:D4:F8",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 25,
+      "y": 225
+    }
+  },
+  "88:13:BF:69:48:C0": {
+    "mac": "88:13:BF:69:48:C0",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 0,
+      "y": 225
+    }
+  },
+  "88:13:BF:68:86:28": {
+    "mac": "88:13:BF:68:86:28",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 25,
+      "y": 200
+    }
+  },
+  "88:13:BF:6A:9C:C8": {
+    "mac": "88:13:BF:6A:9C:C8",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": "8",
+    "led_count": 0,
+    "position": {
+      "x": 500,
+      "y": 200
+    }
+  },
+  "70:B8:F6:4E:8B:D4": {
+    "mac": "70:B8:F6:4E:8B:D4",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 25,
+      "y": 225
+    }
+  },
+  "88:13:BF:69:8A:A0": {
+    "mac": "88:13:BF:69:8A:A0",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 25,
+      "y": 225
+    }
+  },
+  "88:13:BF:63:A4:94": {
+    "mac": "88:13:BF:63:A4:94",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 25,
+      "y": 250
+    }
+  },
+  "88:13:BF:6A:19:74": {
+    "mac": "88:13:BF:6A:19:74",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": "15",
+    "led_count": 0,
+    "position": {
+      "x": 725,
+      "y": 250
+    }
+  },
+  "88:13:BF:62:3E:C8": {
+    "mac": "88:13:BF:62:3E:C8",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 25,
+      "y": 200
+    }
+  },
+  "4C:11:AE:B3:68:F4": {
+    "mac": "4C:11:AE:B3:68:F4",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 25,
+      "y": 175
+    }
+  },
+  "88:13:BF:69:A6:90": {
+    "mac": "88:13:BF:69:A6:90",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 25,
+      "y": 175
+    }
+  },
+  "AC:15:18:E6:44:B8": {
+    "mac": "AC:15:18:E6:44:B8",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 25,
+      "y": 175
+    }
+  },
+  "88:13:BF:6A:CC:5C": {
+    "mac": "88:13:BF:6A:CC:5C",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 25,
+      "y": 150
+    }
+  },
+  "88:13:BF:6A:A0:E4": {
+    "mac": "88:13:BF:6A:A0:E4",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": "7",
+    "led_count": 0,
+    "position": {
+      "x": 500,
+      "y": 125
+    }
+  },
+  "AC:15:18:E6:67:88": {
+    "mac": "AC:15:18:E6:67:88",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 25,
+      "y": 275
+    }
+  },
+  "AC:15:18:E4:E5:0C": {
+    "mac": "AC:15:18:E4:E5:0C",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 0,
+      "y": 275
+    }
+  },
+  "88:13:BF:6A:CA:28": {
+    "mac": "88:13:BF:6A:CA:28",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": "5",
+    "led_count": 0,
+    "position": {
+      "x": 725,
+      "y": 175
+    }
+  },
+  "88:13:BF:23:B3:84": {
+    "mac": "88:13:BF:23:B3:84",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 0,
+      "y": 275
+    }
+  },
+  "88:13:BF:69:CD:30": {
+    "mac": "88:13:BF:69:CD:30",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": "12",
+    "led_count": 0,
+    "position": {
+      "x": 550,
+      "y": 0
+    }
+  },
+  "AC:15:18:E6:69:90": {
+    "mac": "AC:15:18:E6:69:90",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 0,
+      "y": 300
+    }
+  },
+  "88:13:BF:62:2F:74": {
+    "mac": "88:13:BF:62:2F:74",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": "7",
+    "led_count": 0,
+    "position": {
+      "x": 425,
+      "y": 125
+    }
+  },
+  "88:13:BF:23:C4:A0": {
+    "mac": "88:13:BF:23:C4:A0",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": "15",
+    "led_count": 0,
+    "position": {
+      "x": 625,
+      "y": 225
+    }
+  },
+  "88:13:BF:69:7A:74": {
+    "mac": "88:13:BF:69:7A:74",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 125,
+      "y": 300
+    }
+  },
+  "4C:11:AE:B3:75:B8": {
+    "mac": "4C:11:AE:B3:75:B8",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": 0,
+    "led_count": 0,
+    "position": {
+      "x": 25,
+      "y": 0
+    }
+  },
+  "88:13:BF:69:4B:40": {
+    "mac": "88:13:BF:69:4B:40",
+    "name": null,
+    "color": null,
+    "instrument": null,
+    "gwaendli_color": null,
+    "register": "7",
+    "led_count": 0,
+    "position": {
+      "x": 425,
+      "y": 250
+    }
+  }
+}

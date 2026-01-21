@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+   <meta charset="UTF-8">
+   <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+   >
+   <title>SHOWTOOL</title>
+   <script src="static/tailwind.js"></script>
+   <link
+      href="static/flowbite.css"
+      rel="stylesheet"
+   />
+   <script src="static/neodrag.js"></script>
+   <script src="static/vue.js"></script>
+   <script
+      src="static/components/NanoCard.js"
+      type="module"
+   ></script>
+</head>
+
+<body class="bg-gray-100 h-screen p-4">
+   <div
+      id="app"
+      class="antialiased bg-gray-50"
+      v-cloak
+   >
+      <nav class="bg-white border-b border-gray-200 px-4 py-2.5 fixed left-0 right-0 top-0 z-50">
+         <div class="flex flex-wrap justify-between items-center">
+            <div class="flex justify-start items-center">
+               <h1 class="text-3xl font-bold pr-8">NANO MANAGEMENT</h1>
+               <div>
+                  <span
+                     id="online-status"
+                     class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-green-800 bg-green-100 rounded"
+                     :class="{'opacity-100': isConnected, 'opacity-10': !isConnected}"
+                  >
+                     Online
+                  </span>
+                  <span
+                     id="offline-status"
+                     class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-red-800 bg-red-100 rounded"
+                     :class="{'opacity-100': !isConnected, 'opacity-10': isConnected}"
+                  >
+                     Offline
+                  </span>
+               </div>
+            </div>
+         </div>
+      </nav>
+
+      <main class="p-4 h-auto pt-20">
+         <div class="flex justify-between items-center mb-8">
+            <button
+               class="bg-blue-500 text-white px-4 py-2 rounded"
+               onclick="window.history.back();"
+            >
+               Zurück
+            </button>
+         </div>
+
+         <div class="mb-16">
+            <h3 class="text-xl font-bold mb-4">Guggen-Aufstellung</h3>
+            <div
+               id="nano-position-area"
+               class="relative w-[900px] h-[400px] bg-gray-100 rounded-lg border-2 border-dashed border-gray-300"
+            >
+               <!-- Draggable nano circles will be inserted here -->
+            </div>
+         </div>
+
+         <div class="mt-8 mb-16">
+            <h3 class="text-xl font-bold mb-4">Anwesende Gugger</h3>
+            <div
+               id="nano-list"
+               class="flex flex-wrap gap-4"
+            >
+               <nano-card
+                  v-for="(data, mac) in nanos"
+                  :key="mac"
+                  :mac="mac"
+                  :data="data"
+                  @refresh="fetchNanoStatus"
+               ></nano-card>
+            </div>
+         </div>
+      </main>
+   </div>
+
+
+   <script src="./static/flowbite.min.js"></script>
+
+   <script type="module">
+      import { NanoCard } from './static/components/NanoCard.js'
+
+      const { createApp } = Vue
+
+      const app = createApp({
+         components: {
+            'nano-card': NanoCard
+         },
+         data () {
+            return {
+               environment: localStorage.getItem('environment') || 'samuels-macbook-pro.local:8000',
+               isConnected: false,
+               socket: null,
+               nanos: {},
+               draggableNanos: new Map(),
+               statusPollInterval: null
+            }
+         },
+         methods: {
+            connectWebSocket () {
+               this.socket = new WebSocket(`ws://${this.environment}/ws`)
+
+               this.socket.addEventListener('open', () => {
+                  this.isConnected = true
+               })
+
+               this.socket.addEventListener('close', () => {
+                  this.isConnected = false
+                  setTimeout(() => this.connectWebSocket(), 5000)
+               })
+
+               this.socket.addEventListener('message', (event) => {
+                  const data = JSON.parse(event.data)
+                  if (data.type === 'nano_registration') {
+                     this.fetchNanoStatus()
+                  }
+               })
+            },
+            async fetchNanoStatus () {
+               try {
+                  const response = await fetch(`http://${this.environment}/nano/status`)
+                  const data = await response.json()
+                  this.nanos = data
+                  this.updateDraggableNanos(data)
+               } catch (error) {
+                  console.error('Error fetching nano status:', error)
+               }
+            },
+            updateDraggableNanos (nanos) {
+               const positionArea = document.getElementById('nano-position-area')
+
+               // Add a flag to track dragging state
+               let isDragging = false
+               let statusPollInterval
+
+               // Remove nanos that are no longer connected
+               for (const [mac, draggable] of this.draggableNanos.entries()) {
+                  if (!nanos[mac]) {
+                     draggable.destroy()
+                     this.draggableNanos.delete(mac)
+                  }
+               }
+
+               const GWAENDLI_COLOR_MAP = {
+                  'cyan': 'bg-cyan-500 text-white',
+                  'magenta': 'bg-pink-500 text-white',
+                  'yellow': 'bg-yellow-500 text-white'
+               }
+
+               // Update or create nanos
+               Object.entries(nanos).forEach(([mac, data]) => {
+                  const existingNano = positionArea.querySelector(`[data-mac="${mac}"]`)
+
+                  if (!existingNano) {
+                     // Create new nano circle
+                     const nanoCircle = document.createElement('div')
+                     const colorClass = GWAENDLI_COLOR_MAP[data.gwaendli_color] || 'bg-gray-500'
+                     nanoCircle.className = 'absolute w-12 h-12 rounded-full shadow-lg flex items-center justify-center cursor-move ' + colorClass
+                     nanoCircle.setAttribute('data-mac', mac)
+
+                     nanoCircle.innerHTML = `
+                        <span class="text-sm font-bold">${data.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'NA'}</span>
+                        <div class="status-dot absolute w-3 h-3 rounded-full -top-1 -left-1 m-1 ${data.status === 'active' ? 'bg-green-500' : 'bg-red-500'}"></div>
+                        <div class="instrument-emoji absolute w-4 h-4 -bottom-1 left-1/2 transform -translate-x-1/2">
+                           ${data.instrument === 'trumpet' ? '🎺' : data.instrument === 'drum' ? '🥁' : data.instrument === 'piano' ? '🎹' : '🪇'}
+                        </div>
+                     `
+
+                     // Add click event handler
+                     nanoCircle.addEventListener('click', () => {
+                        const nanoCard = document.querySelector(`.nano-card[data-mac="${mac}"]`)
+
+                        nanoCard.classList.add('ring-4', 'ring-black', 'ring-opacity-75')
+
+                        // Scrollt das gefundene Element in den sichtbaren Bereich
+                        nanoCard.scrollIntoView({
+                           behavior: 'smooth',
+                           block: 'start'
+                        })
+
+                        // Nach ein paar Sekunden den Ring wieder entfernen
+                        setTimeout(() => {
+                           nanoCard.classList.remove('ring-4', 'ring-black', 'ring-opacity-75')
+                        }, 7000)
+                     })
+
+                     positionArea.appendChild(nanoCircle)
+
+                     const draggable = new NeoDrag.Draggable(nanoCircle, {
+                        grid: [5, 5],
+                        containment: positionArea,
+                        defaultPosition: {
+                           x: data.position?.x ?? 20,
+                           y: data.position?.y ?? 20
+                        },
+                        onDragStart: () => {
+                           isDragging = true
+                           // Clear the interval when dragging starts
+                           clearInterval(statusPollInterval)
+                        },
+                        onDragEnd: () => {
+                           const rect = nanoCircle.getBoundingClientRect()
+                           const areaRect = positionArea.getBoundingClientRect()
+                           const position = {
+                              x: Math.round((rect.left - areaRect.left) / 25) * 25,
+                              y: Math.round((rect.top - areaRect.top) / 25) * 25
+                           }
+
+                           fetch(`http://${this.environment}/nano/update/${mac}`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ position })
+                           }).catch(error => {
+                              console.error('Error saving position:', error)
+                           }).finally(() => {
+                              isDragging = false
+                              // Restart the interval after dragging ends
+                              statusPollInterval = setInterval(() => !isDragging && this.fetchNanoStatus(), 5000)
+                           })
+                        },
+                     })
+
+                     this.draggableNanos.set(mac, draggable)
+                  } else {
+                     // Update existing nano
+                     const nameSpan = existingNano.querySelector('span')
+                     nameSpan.textContent = data.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'NA'
+
+                     const colorClass = GWAENDLI_COLOR_MAP[data.gwaendli_color] || 'bg-gray-500'
+                     existingNano.className = 'absolute w-12 h-12 rounded-full shadow-lg flex items-center justify-center cursor-move ' + colorClass
+
+                     const instrumentEmoji = existingNano.querySelector('.instrument-emoji')
+                     instrumentEmoji.textContent = data.instrument === 'trumpet' ? '🎺' : data.instrument === 'drum' ? '🥁' : data.instrument === 'piano' ? '🎹' : '🪇'
+
+                     const statusDot = existingNano.querySelector('.status-dot')
+                     statusDot.className = `status-dot absolute w-3 h-3 rounded-full -top-1 -left-1 m-1 ${data.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`
+
+                     const left = data.position?.x ?? 20
+                     const top = data.position?.y ?? 20
+                     existingNano.style.translate = `${left}px ${top}px`
+                  }
+               })
+            },
+         },
+         mounted () {
+            this.connectWebSocket()
+            setTimeout(() => {
+               this.fetchNanoStatus()
+            }, 1000)
+            // Store the interval reference so it can be cleared
+            this.statusPollInterval = setInterval(() => this.fetchNanoStatus(), 5000)
+         }
+      })
+
+      app.mount('#app')
+   </script>
+</body>
+
+</html>

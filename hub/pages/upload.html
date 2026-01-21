@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+   <meta charset="UTF-8">
+   <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+   >
+   <title>SHOWTOOL</title>
+   <script src="static/tailwind.js"></script>
+   <link
+      href="static/flowbite.css"
+      rel="stylesheet"
+   />
+   <script src="static/vue.js"></script>
+   <style>
+      .cursor-move {
+         cursor: move;
+      }
+
+      #sortable-songs tr {
+         transition: background-color 0.2s;
+      }
+
+      #sortable-songs tr.bg-gray-100 {
+         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+   </style>
+</head>
+
+<body class="bg-gray-100 h-screen p-4">
+   <div
+      id="app"
+      class="antialiased bg-gray-50"
+      v-cloak
+   >
+      <nav class="bg-white border-b border-gray-200 px-4 py-2.5 fixed left-0 right-0 top-0 z-50">
+         <div class="flex flex-wrap justify-between items-center">
+            <div class="flex justify-start items-center">
+               <h1 class="text-3xl font-bold pr-8">UPLOAD</h1>
+               <div>
+                  <span
+                     id="online-status"
+                     class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-green-800 bg-green-100 rounded"
+                     :class="{'opacity-100': isConnected, 'opacity-10': !isConnected}"
+                  >
+                     Online
+                  </span>
+                  <span
+                     id="offline-status"
+                     class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-red-800 bg-red-100 rounded"
+                     :class="{'opacity-100': !isConnected, 'opacity-10': isConnected}"
+                  >
+                     Offline
+                  </span>
+               </div>
+            </div>
+         </div>
+      </nav>
+
+      <main class="p-4 h-auto pt-20">
+         <div class="flex justify-between items-center mb-8">
+            <button
+               class="bg-blue-500 text-white px-4 py-2 rounded"
+               onclick="window.history.back();"
+            >
+               Zurück
+            </button>
+         </div>
+
+         <!-- Upload Form -->
+         <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-bold mb-4">Song hochladen</h2>
+
+            <!-- Upload Type Selection -->
+            <div class="mb-4">
+               <label class="block text-gray-700 text-sm font-bold mb-2">Hochladen</label>
+               <select
+                  v-model="uploadType"
+                  class="w-full p-2 border rounded"
+               >
+                  <option value="new">Neues Lied</option>
+                  <option value="update">Bestehendes Lied aktualisieren</option>
+               </select>
+            </div>
+
+            <!-- Existing Song Selection (shown only for updates) -->
+            <div
+               v-if="uploadType === 'update'"
+               class="mb-4"
+            >
+               <label class="block text-gray-700 text-sm font-bold mb-2">
+                  Wähle ein Lied aus
+               </label>
+               <select
+                  v-model="songName"
+                  class="w-full p-2 border rounded"
+               >
+                  <option value="">Wähle ein Lied aus</option>
+                  <option
+                     v-for="song in existingSongs"
+                     :key="song"
+                     :value="song"
+                  >
+                     {{ song }}
+                  </option>
+               </select>
+            </div>
+
+            <!-- Song Name (shown only for new songs) -->
+            <div
+               v-if="uploadType === 'new'"
+               class="mb-4"
+            >
+               <label class="block text-gray-700 text-sm font-bold mb-2">
+                  Name
+               </label>
+               <input
+                  type="text"
+                  v-model="songName"
+                  class="w-full p-2 border rounded"
+                  placeholder="Liedname eingeben"
+               >
+            </div>
+
+            <!-- File Upload -->
+            <div class="mb-4">
+               <label class="block text-gray-700 text-sm font-bold mb-2">
+                  TSN Datei
+               </label>
+               <input
+                  type="file"
+                  id="tsnFile"
+                  accept=".tsn"
+                  @change="handleFileSelect"
+                  class="block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-full file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100"
+               >
+            </div>
+
+            <div class="flex space-x-4">
+               <button
+                  @click="uploadSong"
+                  class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                  :disabled="!isUploadValid"
+               >
+                  Song hochladen
+               </button>
+            </div>
+         </div>
+
+         <!-- Song List -->
+         <div class="bg-white p-6 rounded-lg shadow-md mt-8">
+            <div class="flex justify-between items-center mb-4">
+               <h2 class="text-xl font-bold">Songs</h2>
+               <div class="flex items-center">
+                  <label class="relative inline-flex items-center cursor-pointer">
+                     <input
+                        type="checkbox"
+                        v-model="showArchived"
+                        class="sr-only peer"
+                     >
+                     <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                     <span class="ms-3 text-sm font-medium text-gray-900">Gelöschte anzeigen</span>
+                  </label>
+               </div>
+            </div>
+            <div class="overflow-x-auto">
+               <table class="w-full text-sm text-left text-gray-500">
+                  <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                     <tr>
+                        <th class="px-6 py-3">Name</th>
+                        <th class="px-6 py-3">Versionen</th>
+                        <th class="px-6 py-3">Tempo</th>
+                        <th class="px-6 py-3">Taktart</th>
+                        <th class="px-6 py-3">Zuletzt geändert</th>
+                        <th class="px-6 py-3">Programm</th>
+                        <th class="px-6 py-3">Aktionen</th>
+                     </tr>
+                  </thead>
+                  <tbody id="sortable-songs">
+                     <tr
+                        v-for="song in songs"
+                        :key="song.name"
+                        class="bg-white border-b hover:bg-gray-50 cursor-move"
+                        :data-song-name="song.name"
+                        @mousedown="dragStart"
+                        @mousemove="dragMove"
+                        @mouseup="dragEnd"
+                     >
+                        <td class="px-6 py-4">{{ song.name }}</td>
+                        <td class="px-6 py-4">{{ song.versions_count }}</td>
+                        <td class="px-6 py-4">{{ song.tempo }}</td>
+                        <td class="px-6 py-4">{{ song.beat_style }}</td>
+                        <td class="px-6 py-4">{{ new Date(song.last_modified).toLocaleString() }}</td>
+                        <td class="px-6 py-4">
+                           <div class="flex gap-2">
+                              <button
+                                 v-for="label in ['A', 'B', 'C']"
+                                 :key="label"
+                                 @click="toggleLabel(song.name, label)"
+                                 class="px-3 py-1 rounded"
+                                 :class="{
+                                    'bg-blue-500 text-white': song.label === label,
+                                    'bg-gray-200 text-gray-700': song.label !== label
+                                 }"
+                              >
+                                 {{ label }}
+                              </button>
+                           </div>
+                        </td>
+                        <td class="px-6 py-4">
+                           <button
+                              v-if="!showArchived"
+                              @click="archiveSong(song.name)"
+                              class="text-red-600 hover:text-red-900"
+                              title="Archive Song"
+                           >
+                              <svg
+                                 class="w-5 h-5"
+                                 fill="none"
+                                 stroke="currentColor"
+                                 viewBox="0 0 24 24"
+                              >
+                                 <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                 />
+                              </svg>
+                           </button>
+                           <button
+                              v-else
+                              @click="unarchiveSong(song.name)"
+                              class="text-green-600 hover:text-green-900"
+                              title="Unarchive Song"
+                           >
+                              <svg
+                                 class="w-5 h-5"
+                                 fill="none"
+                                 stroke="currentColor"
+                                 viewBox="0 0 24 24"
+                              >
+                                 <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                                 />
+                              </svg>
+                           </button>
+                        </td>
+                     </tr>
+                  </tbody>
+               </table>
+            </div>
+         </div>
+
+      </main>
+   </div>
+
+
+   <script src="./static/flowbite.min.js"></script>
+
+   <script type="module">
+      const { createApp } = Vue
+
+      const app = createApp({
+         data () {
+            return {
+               environment: localStorage.getItem('environment') || 'samuels-macbook-pro.local:8000',
+               isConnected: false,
+               socket: null,
+               selectedFile: null,
+               songName: '',
+               uploadType: 'new',
+               existingSongs: [],
+               songs: [],
+               showArchived: false,
+               isDragging: false,
+               draggedElement: null,
+               originalOrder: null,
+            }
+         },
+
+         computed: {
+            isUploadValid () {
+               return this.selectedFile && this.songName.trim()
+            },
+            sortedSongs () {
+               return [...this.songs].sort((a, b) => {
+                  return (a.order || 0) - (b.order || 0)
+               })
+            }
+         },
+
+         methods: {
+            connectWebSocket () {
+               this.socket = new WebSocket(`ws://${this.environment}/ws`)
+               this.socket.addEventListener('open', () => {
+                  this.isConnected = true
+               })
+               this.socket.addEventListener('close', () => {
+                  this.isConnected = false
+                  setTimeout(() => this.connectWebSocket(), 5000)
+               })
+            },
+
+            handleFileSelect (event) {
+               this.selectedFile = event.target.files[0]
+            },
+
+            async loadExistingSongs () {
+               try {
+                  const response = await fetch('/songs')
+                  const data = await response.json()
+                  this.existingSongs = data.songs.map(song => song.name)
+               } catch (error) {
+                  console.error('Failed to load songs:', error)
+               }
+            },
+
+            async uploadSong () {
+               if (!this.isUploadValid) {
+                  alert('Please fill in all fields')
+                  return
+               }
+
+               try {
+                  const fileContent = await this.selectedFile.text()
+                  const myHeaders = new Headers()
+                  myHeaders.append("Content-Type", "text/plain")
+
+                  const requestOptions = {
+                     method: "POST",
+                     headers: myHeaders,
+                     body: fileContent,
+                     redirect: "follow"
+                  }
+
+                  const endpoint = this.uploadType === 'new'
+                     ? `http://${this.environment}/songs/import/${this.songName}`
+                     : `http://${this.environment}/songs/import/${this.songName}`
+
+                  const response = await fetch(endpoint, requestOptions)
+                  const result = await response.text()
+                  console.log(result)
+
+                  // Reset form
+                  this.selectedFile = null
+                  this.songName = ''
+                  document.getElementById('tsnFile').value = ''
+
+                  alert('Song uploaded successfully!')
+                  location.reload()
+
+                  // Reload songs list if we're in update mode
+                  if (this.uploadType === 'update') {
+                     await this.loadExistingSongs()
+                  }
+               } catch (error) {
+                  console.error(error)
+                  alert('Upload failed')
+               }
+            },
+
+            async loadSongs () {
+               try {
+                  const response = await fetch(`/songs?archived=${this.showArchived}`)
+                  const data = await response.json()
+                  this.songs = data.songs
+               } catch (error) {
+                  console.error('Failed to load songs:', error)
+               }
+            },
+
+            async toggleLabel (songName, label) {
+               try {
+                  const response = await fetch(`http://${this.environment}/songs/${songName}/label`, {
+                     method: 'PUT',
+                     headers: {
+                        'Content-Type': 'text/plain'
+                     },
+                     body: label
+                  })
+
+                  if (response.ok) {
+                     // Update the local state
+                     const song = this.songs.find(s => s.name === songName)
+                     if (song) {
+                        song.label = song.label === label ? '' : label
+                     }
+                  }
+               } catch (error) {
+                  console.error('Failed to update label:', error)
+               }
+            },
+
+            async archiveSong (songName) {
+               if (!confirm(`Are you sure you want to archive "${songName}"?`)) {
+                  return
+               }
+
+               try {
+                  const response = await fetch(`http://${this.environment}/songs/${songName}`, {
+                     method: 'DELETE'
+                  })
+
+                  if (response.ok) {
+                     await this.loadSongs()
+                  } else {
+                     throw new Error('Failed to archive song')
+                  }
+               } catch (error) {
+                  console.error('Failed to archive song:', error)
+                  alert('Failed to archive song')
+               }
+            },
+
+            async unarchiveSong (songName) {
+               if (!confirm(`Are you sure you want to unarchive "${songName}"?`)) {
+                  return
+               }
+
+               try {
+                  const response = await fetch(`http://${this.environment}/songs/${songName}/unarchive`, {
+                     method: 'POST'
+                  })
+
+                  if (response.ok) {
+                     await this.loadSongs()
+                  } else {
+                     throw new Error('Failed to unarchive song')
+                  }
+               } catch (error) {
+                  console.error('Failed to unarchive song:', error)
+                  alert('Failed to unarchive song')
+               }
+            },
+
+            dragStart (e) {
+               this.isDragging = true
+               this.draggedElement = e.currentTarget
+               this.draggedElement.classList.add('bg-gray-100')
+               this.originalOrder = [...document.querySelectorAll('#sortable-songs tr')]
+                  .map(row => row.dataset.songName)
+            },
+
+            dragMove (e) {
+               if (!this.isDragging) return
+
+               const rows = document.querySelectorAll('#sortable-songs tr')
+               const draggedRect = this.draggedElement.getBoundingClientRect()
+               const draggedMiddle = draggedRect.top + draggedRect.height / 2
+
+               rows.forEach(row => {
+                  if (row === this.draggedElement) return
+
+                  const rect = row.getBoundingClientRect()
+                  if (e.clientY < rect.bottom && e.clientY > rect.top) {
+                     if (draggedMiddle < rect.top) {
+                        row.parentNode.insertBefore(this.draggedElement, row)
+                     } else {
+                        row.parentNode.insertBefore(this.draggedElement, row.nextSibling)
+                     }
+                  }
+               })
+            },
+
+            async dragEnd () {
+               if (!this.isDragging) return
+               this.isDragging = false
+               this.draggedElement.classList.remove('bg-gray-100')
+
+               const newOrder = [...document.querySelectorAll('#sortable-songs tr')]
+                  .map((row, index) => [row.dataset.songName, index + 1])
+
+               // Update order in backend
+               try {
+                  const orderData = Object.fromEntries(newOrder)
+                  await fetch(`http://${this.environment}/songs/order`, {
+                     method: 'PUT',
+                     headers: {
+                        'Content-Type': 'application/json',
+                     },
+                     body: JSON.stringify(orderData)
+                  })
+
+                  // Update local song data with new orders
+                  this.songs.forEach(song => {
+                     song.order = orderData[song.name]
+                  })
+               } catch (error) {
+                  console.error('Failed to update song order:', error)
+                  // Revert to original order if update fails
+                  const tbody = document.querySelector('#sortable-songs')
+                  this.originalOrder.forEach(songName => {
+                     const row = [...tbody.children].find(r => r.dataset.songName === songName)
+                     tbody.appendChild(row)
+                  })
+               }
+
+               this.draggedElement = null
+               this.originalOrder = null
+            }
+         },
+
+         watch: {
+            showArchived (newValue) {
+               this.loadSongs()
+            }
+         },
+
+         mounted () {
+            this.connectWebSocket()
+            this.loadExistingSongs()
+            this.loadSongs()
+         }
+      })
+
+      app.mount('#app')
+   </script>
+</body>
+
+</html>

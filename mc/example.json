@@ -1,0 +1,62 @@
+{
+   "songName": "Army of the Night",
+   "baseTempo": 120,
+   "parts": [
+      {
+         "partName": "Intro",
+         "startTime": 0,
+         "expectedDuration": 16000,
+         "events": [
+            {
+               "time": 0,
+               "channel": 1,
+               "velocityOn": 100,
+               "velocityOff": 100,
+               "duration": 380
+            },
+            {
+               "time": 0,
+               "channel": 25,
+               "velocityOn": 100,
+               "velocityOff": 100,
+               "duration": 380
+            },
+            {
+               "time": 1,
+               "channel": 1,
+               "velocityOn": 100,
+               "velocityOff": 100,
+               "duration": 380
+            },
+            {
+               "time": 1,
+               "channel": 25,
+               "velocityOn": 100,
+               "velocityOff": 100,
+               "duration": 380
+            },
+            {
+               "time": 30,
+               "channel": 1,
+               "velocityOn": 100,
+               "velocityOff": 100,
+               "duration": 380
+            }
+         ]
+      },
+      {
+         "partName": "Str. 1",
+         "startTime": 16000,
+         "expectedDuration": 32000,
+         "events": [
+            {
+               "time": 0,
+               "channel": 1,
+               "velocityOn": 100,
+               "velocityOff": 100,
+               "duration": 380
+            }
+         ]
+      }
+   ]
+}

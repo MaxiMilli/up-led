@@ -1,0 +1,69 @@
+{
+  "song2": {
+    "label": "A",
+    "order": 1
+  },
+  "show2": {
+    "label": "A",
+    "order": 2
+  },
+  "Leave a light on": {
+    "label": "A",
+    "order": 9
+  },
+  "Valhalla": {
+    "label": "A",
+    "order": 12
+  },
+  "Around the World": {
+    "label": "A",
+    "order": 3
+  },
+  "Killing in the Name": {
+    "label": "B",
+    "order": 8
+  },
+  "Ace Of Spades": {
+    "label": "A",
+    "order": 1
+  },
+  "Army of the Nigth": {
+    "label": "A",
+    "order": 2
+  },
+  "Figure it out": {
+    "label": "A",
+    "order": 5
+  },
+  "Gossip": {
+    "label": "B",
+    "order": 6
+  },
+  "Im still standing": {
+    "label": "B",
+    "order": 7
+  },
+  "You know my Name": {
+    "label": "A",
+    "order": 14
+  },
+  "California Dreaming": {
+    "label": "B",
+    "order": 4
+  },
+  "Spiel mir das Lied": {
+    "label": "B",
+    "order": 10
+  },
+  "This Love": {
+    "label": "B",
+    "order": 11
+  },
+  "Vois ton chemine": {
+    "label": "B",
+    "order": 13
+  },
+  "APT": {
+    "label": "C"
+  }
+}

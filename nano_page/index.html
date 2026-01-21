@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+   <meta charset="UTF-8">
+   <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+   >
+   <title>LED Control</title>
+   <style>
+      body {
+         font-family: Arial, sans-serif;
+         max-width: 800px;
+         margin: 20px auto;
+         padding: 0 20px;
+      }
+
+      .control-panel {
+         background: #f5f5f5;
+         padding: 20px;
+         border-radius: 8px;
+         margin-bottom: 20px;
+      }
+
+      .button-group {
+         display: grid;
+         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+         gap: 10px;
+         margin-bottom: 20px;
+      }
+
+      button {
+         padding: 10px;
+         background: #007bff;
+         color: white;
+         border: none;
+         border-radius: 4px;
+         cursor: pointer;
+      }
+
+      button:hover {
+         background: #0056b3;
+      }
+
+      .slider-group {
+         margin-bottom: 15px;
+      }
+
+      .slider-group label {
+         display: block;
+         margin-bottom: 5px;
+      }
+
+      .connection-settings {
+         margin-bottom: 20px;
+      }
+   </style>
+</head>
+
+<body>
+   <div class="connection-settings">
+      <h2>Connection Settings</h2>
+      <input
+         type="text"
+         id="ipAddress"
+         value="192.168.4.1"
+         placeholder="IP Address"
+      >
+      <input
+         type="number"
+         id="port"
+         value="9000"
+         placeholder="Port"
+      >
+      <button onclick="saveSettings()">Save Settings</button>
+   </div>
+
+   <div class="control-panel">
+      <h2>LED Effects</h2>
+
+      <div class="slider-group">
+         <label>Intensity: <span id="intensityValue">255</span></label>
+         <input
+            type="range"
+            id="intensity"
+            min="0"
+            max="255"
+            value="255"
+         >
+      </div>
+
+      <div class="slider-group">
+         <label>Speed: <span id="speedValue">50</span></label>
+         <input
+            type="range"
+            id="speed"
+            min="0"
+            max="255"
+            value="50"
+         >
+      </div>
+
+      <div class="button-group">
+         <button onclick="sendEffect(30)">Running Light</button>
+         <button onclick="sendEffect(31)">Glitter</button>
+         <button onclick="sendEffect(36)">Rainbow</button>
+         <button onclick="sendEffect(37)">Heartbeat</button>
+         <button onclick="sendEffect(42)">Firework</button>
+         <button onclick="sendEffect(43)">DNA</button>
+         <button onclick="sendEffect(0x64)">OFF</button>
+         <button onclick="sendEffect(0x65)">Standby</button>
+      </div>
+   </div>
+
+   <script>
+      // UI Updates
+      document.getElementById('intensity').addEventListener('input', function () {
+         document.getElementById('intensityValue').textContent = this.value
+      })
+
+      document.getElementById('speed').addEventListener('input', function () {
+         document.getElementById('speedValue').textContent = this.value
+      })
+
+      function saveSettings () {
+         localStorage.setItem('ipAddress', document.getElementById('ipAddress').value)
+         localStorage.setItem('port', document.getElementById('port').value)
+      }
+
+      // Load saved settings
+      window.onload = function () {
+         const savedIp = localStorage.getItem('ipAddress')
+         const savedPort = localStorage.getItem('port')
+         if (savedIp) document.getElementById('ipAddress').value = savedIp
+         if (savedPort) document.getElementById('port').value = savedPort
+      }
+
+      function sendEffect (effectId) {
+         const ipAddress = document.getElementById('ipAddress').value
+         const port = document.getElementById('port').value
+         const intensity = parseInt(document.getElementById('intensity').value)
+         const speed = parseInt(document.getElementById('speed').value)
+
+         // Create command structure (11 bytes)
+         const data = new Uint8Array(11)
+         data[0] = effectId     // effect
+         data[1] = 0            // duration high byte
+         data[2] = 100          // duration low byte
+         data[3] = intensity    // intensity
+         data[4] = 255          // red
+         data[5] = 255          // green
+         data[6] = 255          // blue
+         data[7] = 0            // rainbow
+         data[8] = 0            // speed high byte
+         data[9] = speed        // speed low byte
+         data[10] = 4           // length
+
+         // Create WebSocket connection
+         const ws = new WebSocket(`ws://${ipAddress}:${port}`)
+
+         ws.onopen = function () {
+            ws.send(data)
+            console.log('Effect sent:', effectId)
+            ws.close()
+         }
+
+         ws.onerror = function (error) {
+            console.error('WebSocket Error:', error)
+            alert('Error sending command. Check connection settings.')
+         }
+      }
+   </script>
+</body>
+
+</html>

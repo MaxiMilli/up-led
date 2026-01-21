@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+   <meta charset="UTF-8">
+   <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+   >
+   <title>set</title>
+   <script src="static/tailwind.js"></script>
+</head>
+
+<body class="bg-gray-100 h-screen p-4">
+   <div class="container mx-auto h-full">
+      <!-- Header -->
+      <div class="flex justify-between items-center mb-8">
+         <div class="flex items-center">
+            <h1 class="text-5xl font-bold">SHOWTOOL</h1>
+            <div class="flex items-start flex-col">
+               <span
+                  id="online-status"
+                  class="ml-2 text-green-500 opacity-10 font-bold"
+               >ONLINE</span>
+               <span
+                  id="offline-status"
+                  class="ml-2 text-red-500 opacity-10 font-bold"
+               >OFFLINE</span>
+            </div>
+         </div>
+         <button
+            id="reconnect-button"
+            class="bg-blue-500 text-white px-4 py-2 rounded mt-2 ml-2"
+         >RECONNECT</button>
+      </div>
+
+      <!-- Main Content -->
+      <div class="flex h-5/6 gap-8">
+         <!-- Left Side - Song List -->
+         <div class="w-1/3 bg-white rounded-lg shadow-lg p-4">
+            <!-- Navigation -->
+            <div class="flex gap-2 mb-4">
+               <button
+                  class="bg-black text-white px-4 py-2 rounded"
+                  onclick="toggleCategory(this)"
+               >A</button>
+               <button
+                  class="bg-black text-white px-4 py-2 rounded"
+                  onclick="toggleCategory(this)"
+               >B</button>
+               <button
+                  class="bg-black text-white px-4 py-2 rounded"
+                  onclick="toggleCategory(this)"
+               >SONSTIGES</button>
+            </div>
+
+            <!-- Song List -->
+            <div
+               id="song-list"
+               class="space-y-4"
+            >
+               <!-- Songs will be inserted here -->
+            </div>
+            <!-- Info Bar -->
+            <div class="flex justify-between items-center mb-4 border-t-2 border-gray-300 p-2 mt-6">
+               <button
+                  id="refetch-button"
+                  class="text-gray-300 rounded p-2"
+                  onclick="fetchSongs()"
+               >refresh</button>
+            </div>
+         </div>
+
+         <!-- Right Side - Song Details -->
+         <div class="w-2/3 bg-white rounded-lg shadow-lg p-4">
+            <div
+               id="song-details"
+               class="h-full"
+            >
+               <div class="flex justify-between items-center mb-8">
+                  <h2
+                     id="selected-song-title"
+                     class="text-3xl font-bold"
+                  >Select a song</h2>
+                  <span
+                     id="loading-status"
+                     class="hidden px-4 py-2 bg-green-500 text-white rounded"
+                  >GELADEN!</span>
+               </div>
+
+               <!-- Timeline -->
+               <div
+                  id="timeline"
+                  class="space-y-4 mb-8"
+               >
+                  <!-- Timeline items will be inserted here -->
+               </div>
+
+               <!-- Controls -->
+               <div class="flex gap-4 justify-center mt-8">
+                  <button
+                     class="bg-green-500 text-white px-16 py-4 rounded-lg text-2xl"
+                     onclick="playSong()"
+                  >PLAY</button>
+                  <button
+                     class="bg-green-500 text-white px-16 py-4 rounded-lg text-2xl"
+                     onclick="nextSong()"
+                  >NEXT</button>
+               </div>
+            </div>
+         </div>
+      </div>
+
+      <div class="w-full bg-white rounded-lg shadow-lg p-4 mb-8">
+         <div class="flex gap-4 items-end">
+            <div class="flex-1">
+               <label class="block text-sm font-medium text-gray-700 mb-1">TSN File</label>
+               <input
+                  type="file"
+                  id="tsnFile"
+                  accept=".tsn"
+                  class="block w-full text-sm text-gray-500
+                                file:mr-4 file:py-2 file:px-4
+                                file:rounded-full file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-blue-50 file:text-blue-700
+                                hover:file:bg-blue-100"
+               >
+            </div>
+            <div class="flex-1">
+               <label class="block text-sm font-medium text-gray-700 mb-1">Song Name</label>
+               <input
+                  type="text"
+                  id="songName"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+               >
+            </div>
+            <button
+               onclick="uploadTsn()"
+               class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+               Upload Song
+            </button>
+         </div>
+      </div>
+   </div>
+
+   <script>
+      // WebSocket Setup
+      let socket = new WebSocket('ws://samuels-macbook-pro.local:8000/ws')
+      const onlineStatus = document.getElementById('online-status')
+      const offlineStatus = document.getElementById('offline-status')
+
+      function connectWebSocket () {
+         socket = new WebSocket('ws://samuels-macbook-pro.local:8000/ws')
+
+         socket.addEventListener('open', () => {
+            onlineStatus.classList.remove('opacity-10')
+            onlineStatus.classList.add('opacity-100')
+            offlineStatus.classList.remove('opacity-100')
+            offlineStatus.classList.add('opacity-10')
+            document.getElementById('reconnect-button').style.display = 'none'
+
+         })
+
+         socket.addEventListener('close', () => {
+            onlineStatus.classList.remove('opacity-100')
+            onlineStatus.classList.add('opacity-10')
+            offlineStatus.classList.remove('opacity-10')
+            offlineStatus.classList.add('opacity-100')
+            document.getElementById('reconnect-button').style.display = 'block'
+            // Versuche alle 5 Sekunden neu zu verbinden
+            setTimeout(connectWebSocket, 5000)
+         })
+
+         socket.addEventListener('message', (event) => {
+            console.log("message received")
+            const data = JSON.parse(event.data)
+            if (data.type === 'playback_ended') {
+               // Reset UI elements
+               document.getElementById('selected-song-title').textContent = 'Select a song'
+               document.getElementById('timeline').innerHTML = ''
+               document.getElementById('loading-status').classList.add('hidden')
+
+               if (data.status === 'completed') {
+                  console.log(`Song ${data.song_name} finished playing`)
+               } else if (data.status === 'error') {
+                  console.error(`Error playing song ${data.song_name}: ${data.error}`)
+               }
+            }
+            if (data.type === 'tick') {
+               console.log(`Tick ${data.tick} for song ${data.song_name}`)
+               const tickBars = document.querySelectorAll('.tick-bar')
+               tickBars.forEach(bar => {
+                  if (parseInt(bar.dataset.tick) === data.tick) {
+                     bar.classList.remove('bg-blue-500')
+                     bar.classList.add('bg-red-500')
+                  } else {
+                     bar.classList.remove('bg-red-500')
+                     bar.classList.add('bg-blue-500')
+                  }
+               })
+            }
+         })
+      }
+
+      connectWebSocket()
+      document.getElementById('reconnect-button').addEventListener('click', () => {
+         console.log("hallo")
+
+         connectWebSocket()
+      })
+
+      // Fetch and display songs
+      async function fetchSongs () {
+         try {
+            const response = await fetch('/songs')
+            const data = await response.json()
+            displaySongs(data.songs)
+         } catch (error) {
+            console.error('Error fetching songs:', error)
+         }
+      }
+
+      function displaySongs (songs) {
+         const songList = document.getElementById('song-list')
+         songList.innerHTML = ''
+
+         songs.forEach(song => {
+            const songElement = document.createElement('div')
+            songElement.className = 'p-4 border rounded cursor-pointer hover:bg-gray-100'
+            songElement.innerHTML = `
+                    <h3 class="text-xl font-bold">${song.name}</h3>
+                    <div class="flex justify-between">
+                        <span class="text-black font-bold">${song.tempo}</span>
+                        <span class="text-gray-600">Version ${song.latest_version} - ${new Date(song.last_modified).toLocaleDateString()}</span>
+                    </div>
+                `
+            songElement.addEventListener('click', () => loadSong(song.name))
+            songList.appendChild(songElement)
+         })
+      }
+
+      async function loadSong (songName) {
+         const loadingStatus = document.getElementById('loading-status')
+         const songTitle = document.getElementById('selected-song-title')
+         const timeline = document.getElementById('timeline')
+
+         // Show loading state
+         loadingStatus.classList.remove('hidden')
+         loadingStatus.textContent = 'LADEN...'
+         songTitle.textContent = songName
+
+         try {
+            const response = await fetch(`/songs/${songName}/load`, {
+               method: 'POST'
+            })
+            const data = await response.json()
+
+            if (data.status === 'success') {
+               loadingStatus.textContent = 'GELADEN!'
+               displayTimeline(data.details.tracks)
+            }
+         } catch (error) {
+            console.error('Error loading song:', error)
+            loadingStatus.textContent = 'ERROR!'
+            loadingStatus.classList.remove('bg-green-500')
+            loadingStatus.classList.add('bg-red-500')
+         }
+      }
+
+      function displayTimeline (tracks) {
+         const timeline = document.getElementById('timeline')
+         timeline.innerHTML = ''
+
+         // Find the maximum duration across all parts
+         let maxDuration = 0
+         tracks.forEach(track => {
+            track.parts.forEach(part => {
+               const duration = part.end.seconds - part.start.seconds
+               maxDuration = Math.max(maxDuration, duration)
+            })
+         })
+
+         tracks.forEach(track => {
+            track.parts.forEach(part => {
+               const duration = part.end.seconds - part.start.seconds
+               // Calculate width as percentage of maxDuration, capped at 100%
+               const width = Math.min(((duration / maxDuration) * 100), 100).toFixed(1)
+               const partElement = document.createElement('div')
+               partElement.className = 'bg-blue-500 h-8 rounded tick-bar'
+               partElement.setAttribute('data-tick', part.start.tick)
+               partElement.style.width = `${width}%`
+               partElement.textContent = part.start.tick
+               timeline.appendChild(partElement)
+            })
+         })
+      }
+
+      // Initial load
+      fetchSongs()
+
+      function playSong () {
+         const requestOptions = {
+            method: "POST",
+            redirect: "follow"
+         }
+
+         fetch("/songs/play", requestOptions)
+            .then((response) => response.text())
+            .then((result) => console.log(result))
+            .catch((error) => console.error(error))
+      }
+
+      function nextSong () {
+         const requestOptions = {
+            method: "POST",
+            redirect: "follow"
+         }
+
+         fetch("/songs/next", requestOptions)
+            .then((response) => response.text())
+            .then((result) => console.log(result))
+            .catch((error) => console.error(error))
+      }
+
+      async function uploadTsn () {
+         const fileInput = document.getElementById('tsnFile')
+         const songName = document.getElementById('songName').value.trim()
+
+         if (!fileInput.files[0]) {
+            alert('Please select a file')
+            return
+         }
+         if (!songName) {
+            alert('Please enter a song name')
+            return
+         }
+
+         try {
+            const fileContent = await fileInput.files[0].text()
+
+            const myHeaders = new Headers()
+            myHeaders.append("Content-Type", "text/plain")
+
+            const requestOptions = {
+               method: "POST",
+               headers: myHeaders,
+               body: fileContent,
+               redirect: "follow"
+            }
+
+            const response = await fetch(`http://localhost:8000/songs/import/${songName}`, requestOptions)
+            const result = await response.text()
+            console.log(result)
+
+            // Reset form and refresh song list
+            fileInput.value = ''
+            document.getElementById('songName').value = ''
+            fetchSongs() // Refresh the song list
+
+         } catch (error) {
+            console.error(error)
+            alert('Upload failed')
+         }
+      }
+   </script>
+</body>
+
+</html>

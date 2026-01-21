@@ -1,0 +1,55 @@
+{
+   "songName": "10s Oranger Tazelwurm bei den Pauken",
+   "baseTempo": 120,
+   "parts": [
+      {
+         "partName": "Tatzelwurm",
+         "startTime": 0,
+         "expectedDuration": 10000,
+         "events": [
+            {
+               "time": 0,
+               "channel": 4,
+               "velocityOn": 1,
+               "velocityOff": 0,
+               "duration": 10000
+            },
+            {
+               "time": 0,
+               "channel": 16,
+               "velocityOn": 100,
+               "velocityOff": 0,
+               "duration": 10000
+            },
+            {
+               "time": 0,
+               "channel": 17,
+               "velocityOn": 64,
+               "velocityOff": 0,
+               "duration": 10000
+            },
+            {
+               "time": 0,
+               "channel": 25,
+               "velocityOn": 2500,
+               "velocityOff": 0,
+               "duration": 10000
+            },
+            {
+               "time": 0,
+               "channel": 26,
+               "velocityOn": 5,
+               "velocityOff": 0,
+               "duration": 10000
+            },
+            {
+               "time": 0,
+               "channel": 30,
+               "velocityOn": 70,
+               "velocityOff": 0,
+               "duration": 10000
+            }
+         ]
+      }
+   ]
+}

@@ -1,0 +1,44 @@
+<PartList>
+   <PartData
+     PartName="Tatzelwurm"
+     PartStart="0"
+     PartEnd="10000"
+     TaktNum="8"
+     StartTaktNr="0">
+      <NoteList>
+         <Msg=0,144,4,1,0/>
+         <Msg=0,144,16,100,0/>
+         <Msg=0,144,17,64,0/>
+         <Msg=0,144,25,2500,0/>
+         <Msg=0,144,26,5,0/>
+         <Msg=0,144,30,70,0/>
+         <Msg=0,128,4,1,0/>
+         <Msg=0,128,16,100,0/>
+         <Msg=0,128,17,64,0/>
+         <Msg=0,128,25,2500,0/>
+         <Msg=0,128,26,5,0/>
+         <Msg=0,128,30,70,0/>
+      </NoteList>
+   </PartData>
+   <PartData
+     PartName="Tatzelwurm 2"
+     PartStart="0"
+     PartEnd="10000"
+     TaktNum="8"
+     StartTaktNr="0">
+      <NoteList>
+         <Msg=0,144,4,1,0/>
+         <Msg=0,144,16,100,0/>
+         <Msg=0,144,17,64,0/>
+         <Msg=0,144,25,2500,0/>
+         <Msg=0,144,26,5,0/>
+         <Msg=0,144,30,70,0/>
+         <Msg=0,128,4,1,0/>
+         <Msg=0,128,16,100,0/>
+         <Msg=0,128,17,64,0/>
+         <Msg=0,128,25,2500,0/>
+         <Msg=0,128,26,5,0/>
+         <Msg=0,128,30,70,0/>
+      </NoteList>
+   </PartData>
+</PartList>

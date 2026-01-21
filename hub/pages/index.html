@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+   <meta charset="UTF-8">
+   <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+   >
+   <title>SHOWTOOL</title>
+   <script src="static/tailwind.js"></script>
+   <link
+      href="static/flowbite.css"
+      rel="stylesheet"
+   />
+   <script src="static/neodrag.js"></script>
+   <script src="static/vue.js"></script>
+   <script
+      src="static/components/NanoCard.js"
+      type="module"
+   ></script>
+   <style>
+      /* Prevent text selection */
+      * {
+         -webkit-user-select: none;
+         -moz-user-select: none;
+         -ms-user-select: none;
+         user-select: none;
+      }
+
+      /* Prevent touch callout on iOS */
+      * {
+         -webkit-touch-callout: none;
+      }
+
+      /* Make buttons larger and more touch-friendly */
+      button {
+         min-height: 44px;
+         min-width: 44px;
+         padding: 12px 24px;
+         margin: 8px;
+         font-size: 1.2rem;
+      }
+
+      /* Increase spacing between interactive elements */
+      .space-y-2 {
+         margin-top: 1rem;
+         margin-bottom: 1rem;
+      }
+
+      /* Make timeline parts larger and more touch-friendly */
+      #timeline>div {
+         min-height: 80px !important;
+         margin-bottom: 16px;
+      }
+
+      /* Increase text size for better readability */
+      .text-sm {
+         font-size: 1.1rem;
+      }
+
+      .text-xs {
+         font-size: 1rem;
+      }
+
+      /* Increase contrast for better visibility */
+      .text-gray-300 {
+         color: rgb(156, 163, 175);
+      }
+
+      /* Prevent rubber-band scrolling on iOS */
+      html {
+         position: fixed;
+         width: 100%;
+         height: 100%;
+         overflow: hidden;
+      }
+
+      body {
+         overflow-y: scroll;
+         -webkit-overflow-scrolling: touch;
+         position: absolute;
+         width: 100%;
+         height: 100%;
+      }
+
+      .cursor-move {
+         cursor: move;
+      }
+
+      #sortable-songs tr {
+         transition: background-color 0.2s;
+      }
+
+      #sortable-songs tr.bg-gray-100 {
+         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+   </style>
+</head>
+
+<body class="bg-gray-100 h-screen p-4">
+   <div
+      id="app"
+      class="antialiased bg-gray-50"
+      v-cloak
+   >
+      <nav class="bg-white border-b border-gray-200 px-4 py-2.5 fixed left-0 right-0 top-0 z-50">
+         <div class="flex flex-wrap justify-between items-center">
+            <div class="flex justify-start items-center">
+               <button
+                  data-drawer-target="drawer-navigation"
+                  data-drawer-toggle="drawer-navigation"
+                  aria-controls="drawer-navigation"
+                  class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:ring-2 focus:ring-gray-100"
+               >
+                  <svg
+                     aria-hidden="true"
+                     class="w-6 h-6"
+                     fill="currentColor"
+                     viewBox="0 0 20 20"
+                     xmlns="http://www.w3.org/2000/svg"
+                  >
+                     <path
+                        fill-rule="evenodd"
+                        d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                        clip-rule="evenodd"
+                     ></path>
+                  </svg>
+                  <span class="sr-only">Toggle sidebar</span>
+               </button>
+               <h1
+                  class="text-3xl font-bold pr-8"
+                  @click="showSidebar = !showSidebar"
+               >SHOWTOOL</h1>
+               <div>
+                  <span
+                     id="online-status"
+                     class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-green-800 bg-green-100 rounded"
+                     :class="{'opacity-100': isConnected, 'opacity-10': !isConnected}"
+                  >
+                     Online
+                  </span>
+                  <span
+                     id="offline-status"
+                     class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-red-800 bg-red-100 rounded"
+                     :class="{'opacity-100': !isConnected, 'opacity-10': isConnected}"
+                  >
+                     Offline
+                  </span>
+               </div>
+            </div>
+
+            <div class="flex items-center lg:order-2">
+               <div class="flex items-center text-gray-300">
+                  {{ currentEnvironment }}
+               </div>
+               <!-- Add environment toggle button -->
+               <button
+                  type="button"
+                  id="environment-button"
+                  class="p-2 mr-1 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 focus:ring-4 focus:ring-gray-300"
+                  @click="toggleEnvironment"
+                  :title="currentEnvironment"
+               >
+                  <svg
+                     class="w-6 h-6 text-gray-800"
+                     aria-hidden="true"
+                     xmlns="http://www.w3.org/2000/svg"
+                     fill="none"
+                     viewBox="0 0 20 20"
+                  >
+                     <path
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M10 14v4m-4 1h8M1 10h18M2 1h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1Z"
+                     />
+                  </svg>
+               </button>
+
+               <button
+                  type="button"
+                  id="reconnect-button"
+                  class="p-2 mr-1 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 focus:ring-4 focus:ring-gray-300"
+               >
+                  <svg
+                     class="w-6 h-6 text-gray-800"
+                     aria-hidden="true"
+                     xmlns="http://www.w3.org/2000/svg"
+                     fill="none"
+                     viewBox="0 0 20 18"
+                  >
+                     <path
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="m1 14 3-3m-3 3 3 3m-3-3h16v-3m2-7-3 3m3-3-3-3m3 3H3v3"
+                     ></path>
+                  </svg>
+               </button>
+            </div>
+         </div>
+      </nav>
+
+      <!-- Sidebar -->
+      <aside
+         id="drawer-navigation"
+         class="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform bg-white border-r border-gray-200"
+         :class="{
+            '-translate-x-full': !showSidebar,
+            'md:translate-x-0': showSidebar
+         }"
+         aria-label="Sidebar"
+      >
+         <div class="h-full px-3 pb-4 overflow-y-auto bg-white">
+            <ul class="space-y-2 font-medium border-b border-gray-200 mb-4 pb-4">
+               <li>
+                  <a
+                     href="/nanos"
+                     class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 group"
+                  >
+                     <svg
+                        class="w-6 h-6 text-gray-800"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                     >
+                        <path
+                           stroke="currentColor"
+                           stroke-linecap="round"
+                           stroke-linejoin="round"
+                           stroke-width="2"
+                           d="M9.143 4H4.857A.857.857 0 0 0 4 4.857v4.286c0 .473.384.857.857.857h4.286A.857.857 0 0 0 10 9.143V4.857A.857.857 0 0 0 9.143 4Zm10 0h-4.286a.857.857 0 0 0-.857.857v4.286c0 .473.384.857.857.857h4.286A.857.857 0 0 0 20 9.143V4.857A.857.857 0 0 0 19.143 4Zm-10 10H4.857a.857.857 0 0 0-.857.857v4.286c0 .473.384.857.857.857h4.286a.857.857 0 0 0 .857-.857v-4.286A.857.857 0 0 0 9.143 14Zm10 0h-4.286a.857.857 0 0 0-.857.857v4.286c0 .473.384.857.857.857h4.286a.857.857 0 0 0 .857-.857v-4.286a.857.857 0 0 0-.857-.857Z"
+                        />
+                     </svg>
+
+                     <span class="ml-3">Nanos</span>
+                  </a>
+               </li>
+               <li>
+                  <a
+                     href="/manual"
+                     class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 group"
+                  >
+                     <svg
+                        class="w-6 h-6 text-gray-800"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                     >
+                        <path
+                           fill-rule="evenodd"
+                           d="M5 8a4 4 0 1 1 7.796 1.263l-2.533 2.534A4 4 0 0 1 5 8Zm4.06 5H7a4 4 0 0 0-4 4v1a2 2 0 0 0 2 2h2.172a2.999 2.999 0 0 1-.114-1.588l.674-3.372a3 3 0 0 1 .82-1.533L9.06 13Zm9.032-5a2.907 2.907 0 0 0-2.056.852L9.967 14.92a1 1 0 0 0-.273.51l-.675 3.373a1 1 0 0 0 1.177 1.177l3.372-.675a1 1 0 0 0 .511-.273l6.07-6.07a2.91 2.91 0 0 0-.944-4.742A2.907 2.907 0 0 0 18.092 8Z"
+                           clip-rule="evenodd"
+                        />
+                     </svg>
+
+                     <span class="ml-3">Manuell</span>
+                  </a>
+               </li>
+               <li>
+                  <a
+                     href="/upload"
+                     class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 group"
+                  >
+                     <svg
+                        class="w-6 h-6 text-gray-800"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                     >
+                        <path
+                           fill-rule="evenodd"
+                           d="M17.316 4.052a.99.99 0 0 0-.9.14c-.262.19-.416.495-.416.82v8.566a4.573 4.573 0 0 0-2-.464c-1.99 0-4 1.342-4 3.443 0 2.1 2.01 3.443 4 3.443 1.99 0 4-1.342 4-3.443V6.801c.538.5 1 1.219 1 2.262 0 .56.448 1.013 1 1.013s1-.453 1-1.013c0-1.905-.956-3.18-1.86-3.942a6.391 6.391 0 0 0-1.636-.998 4 4 0 0 0-.166-.063l-.013-.005-.005-.002h-.002l-.002-.001ZM4 5.012c-.552 0-1 .454-1 1.013 0 .56.448 1.013 1 1.013h9c.552 0 1-.453 1-1.013 0-.559-.448-1.012-1-1.012H4Zm0 4.051c-.552 0-1 .454-1 1.013 0 .56.448 1.013 1 1.013h9c.552 0 1-.454 1-1.013 0-.56-.448-1.013-1-1.013H4Zm0 4.05c-.552 0-1 .454-1 1.014 0 .559.448 1.012 1 1.012h4c.552 0 1-.453 1-1.012 0-.56-.448-1.013-1-1.013H4Z"
+                           clip-rule="evenodd"
+                        />
+                     </svg>
+
+                     <span class="ml-3">Song Upload</span>
+                  </a>
+               </li>
+            </ul>
+            <ul
+               id="song-list"
+               class="space-y-2"
+            >
+
+            </ul>
+            <ul class="fixed bottom-0 left-0 right-0">
+               <li>
+                  <a
+                     href="/dangerzone"
+                     class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 group"
+                  >
+                     Dangerzone
+                  </a>
+               </li>
+            </ul>
+         </div>
+      </aside>
+
+      <main
+         class="p-4 h-auto pt-20"
+         :class="{
+            'md:ml-64': showSidebar,
+            'md:ml-0': !showSidebar
+         }"
+      >
+         <div class="flex justify-between items-center mb-8">
+            <h2 class="text-3xl font-bold">{{ selectedSongTitle }}</h2>
+            <div class="flex items-center gap-4">
+               <!-- Add Tempo Display -->
+               <span
+                  v-if="currentTick !== null"
+                  class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-blue-800 bg-blue-100 rounded"
+               >
+                  BPM: {{ getCurrentTempo(currentTick) }}
+               </span>
+               <!-- Add MIDI Event Display -->
+               <span
+                  v-if="lastMidiEvent"
+                  class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-purple-800 bg-purple-100 rounded"
+               >
+                  MIDI: {{ lastMidiEvent }}
+               </span>
+               <!-- Add Label Filter -->
+               <div class="flex gap-2">
+                  <button
+                     v-for="label in ['Alle', 'A', 'B', 'C']"
+                     :key="label"
+                     @click="setLabelFilter(label)"
+                     class="px-3 py-1 rounded"
+                     :class="{
+                        'bg-blue-500 text-white': activeLabel === label,
+                        'bg-gray-200 text-gray-700': activeLabel !== label
+                     }"
+                  >
+                     {{ label }}
+                  </button>
+               </div>
+               <!-- Existing Loading Status -->
+               <span
+                  class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-green-800 bg-green-100 rounded"
+                  :class="{'hidden': !loadingStatus.show}"
+               >
+                  {{ loadingStatus.text }}
+               </span>
+            </div>
+         </div>
+
+         <!-- Song List (shown when no song is selected) -->
+         <div
+            v-if="selectedSongTitle === 'Wähle ein Song'"
+            class="bg-white p-6 rounded-lg shadow-md"
+         >
+            <div class="overflow-x-hidden">
+               <table class="w-full text-sm text-left text-gray-500">
+                  <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                     <tr>
+                        <th class="px-6 py-3">Name</th>
+                        <th class="px-6 py-3">LADEN</th>
+                        <th class="px-6 py-3">Versionen</th>
+                        <th class="px-6 py-3">Programm</th>
+                     </tr>
+                  </thead>
+                  <tbody id="sortable-songs">
+                     <tr
+                        v-for="song in sortedSongs"
+                        :key="song.name"
+                        class="bg-white border-b hover:bg-gray-50"
+                     >
+                        <td class="px-6 py-4 text-xl font-bold text-black">{{ song.name }}</td>
+                        <td class="px-6 py-4">
+                           <button
+                              class="text-white bg-blue-700 hover:bg-blue-800 w-20 h-10 rounded-lg flex items-center justify-center"
+                              @click="loadSong(song.name)"
+                              title="Load Song"
+                           >
+                              <svg
+                                 class="w-6 h-6 text-white"
+                                 aria-hidden="true"
+                                 xmlns="http://www.w3.org/2000/svg"
+                                 fill="currentColor"
+                                 viewBox="0 0 10 16"
+                              >
+                                 <path d="M3.414 1A2 2 0 0 0 0 2.414v11.172A2 2 0 0 0 3.414 15L9 9.414a2 2 0 0 0 0-2.828L3.414 1Z"></path>
+                              </svg>
+                           </button>
+                        </td>
+                        <td class="px-6 py-4">{{ song.versions_count }}<br>BPM: {{ song.tempo }}<br>{{ new Date(song.last_modified).toLocaleString() }}</td>
+                        <td class="px-6 py-4">
+                           <div class="flex gap-2">
+                              <button
+                                 v-for="label in ['A', 'B', 'C']"
+                                 :key="label"
+                                 class="px-3 py-1 rounded"
+                                 :class="{
+                                          'bg-blue-500 text-white': song.label === label,
+                                          'bg-gray-200 text-gray-700': song.label !== label
+                                      }"
+                                 disabled
+                              >
+                                 {{ label }}
+                              </button>
+                           </div>
+                        </td>
+                     </tr>
+                  </tbody>
+               </table>
+            </div>
+         </div>
+
+         <!-- Timeline (shown when song is selected) -->
+         <div
+            v-else
+            id="timeline"
+            class="space-y-4 mb-8 pb-16"
+         >
+            <!-- Timeline items will be inserted here -->
+         </div>
+
+         <!-- Controls -->
+         <div class="flex gap-4 justify-center mt-8 bottom-0 fixed p-4 z-50">
+            <button
+               v-show="showPlayButton"
+               class="bg-green-500 text-white px-16 py-8 rounded-lg text-2xl"
+               @click="playSong"
+            >PLAY</button>
+            <!-- <button
+               v-show="showStopButton"
+               class="bg-red-500 text-white px-4 py-4 rounded-lg text-xl"
+               @click="stopSong"
+            >STOP</button> -->
+         </div>
+
+         <!-- Hold and Next Buttons (fixed position) -->
+         <div class="fixed bottom-4 right-4 flex flex-col gap-4 z-50">
+            <button
+               v-show="showStopButton"
+               class="bg-red-500 text-white px-16 py-8 rounded-lg text-2xl mb-12"
+               @click="stopSong"
+            >STOP</button>
+            <button
+               v-show="showNextButton"
+               class="bg-yellow-500 text-white px-16 py-8 rounded-lg text-2xl"
+               @mousedown="holdSong"
+               @mouseup="releaseHold"
+               @mouseleave="releaseHold"
+               @touchstart.prevent="holdSong"
+               @touchend.prevent="releaseHold"
+            >HOLD</button>
+            <button
+               v-show="showNextButton"
+               class="bg-green-500 text-white px-16 py-8 rounded-lg text-2xl"
+               @click="nextSong"
+            >NEXT</button>
+         </div>
+      </main>
+   </div>
+
+   <script src="./static/flowbite.min.js"></script>
+
+
+   <script type="module">
+      import { NanoCard } from './static/components/NanoCard.js'
+
+      const { createApp } = Vue
+
+      const app = createApp({
+         components: {
+            'nano-card': NanoCard
+         },
+         data () {
+            return {
+               isConnected: false,
+               socket: null,
+               selectedSongTitle: 'Wähle ein Song',
+               loadingStatus: {
+                  show: false,
+                  text: ''
+               },
+               showPlayButton: false,
+               showNextButton: false,
+               showStopButton: false,
+               showSidebar: true,
+               songs: [],
+               nanos: {},
+               activeLabel: localStorage.getItem('selectedLabel') || 'Alle',
+               tickHistory: [],
+               lastTickTime: null,
+               cursorAnimationFrame: null,
+               currentTick: null,
+               ticksPerSecond: null,
+               lastMidiEvent: null,
+               currentSongDetails: null,
+               lastActivePart: null,
+               isDragging: false,
+               draggedElement: null,
+               originalOrder: null,
+               currentEnvironment: localStorage.getItem('environment') || 'samuels-macbook-pro.local:8000',
+               isHolding: false,
+               cursorBlinkInterval: null,
+            }
+         },
+
+         methods: {
+            toggleEnvironment () {
+               const environments = [
+                  'samuels-macbook-pro.local:8000',
+                  'hub.local:8000'
+               ]
+               const currentIndex = environments.indexOf(this.currentEnvironment)
+               const nextIndex = (currentIndex + 1) % environments.length
+               this.currentEnvironment = environments[nextIndex]
+               localStorage.setItem('environment', this.currentEnvironment)
+
+               // Reconnect websocket with new environment
+               if (this.socket) {
+                  this.socket.close()
+               }
+               this.connectWebSocket()
+            },
+
+            connectWebSocket () {
+               this.socket = new WebSocket(`ws://${this.currentEnvironment}/ws`)
+
+               this.socket.addEventListener('open', () => {
+                  this.isConnected = true
+                  document.getElementById('reconnect-button').style.display = 'none'
+               })
+
+               this.socket.addEventListener('close', () => {
+                  this.isConnected = false
+                  document.getElementById('reconnect-button').style.display = 'block'
+                  setTimeout(() => this.connectWebSocket(), 5000)
+               })
+
+               this.socket.addEventListener('message', this.handleWebSocketMessage)
+            },
+
+            async handleWebSocketMessage (event) {
+               const data = JSON.parse(event.data)
+
+               console.log(data)
+
+
+               if (data.type === 'playback_status') {
+                  if (data.is_playing) {
+                     this.showPlayButton = false
+                     this.showStopButton = true
+                     this.showNextButton = true
+                     await this.fetchCurrentSong()
+                  }
+               }
+               if (data.type === 'playback_ended') {
+                  this.selectedSongTitle = 'Wähle ein Song'
+                  this.loadingStatus.show = false
+                  this.showPlayButton = false
+                  this.showStopButton = false
+                  this.showNextButton = false
+
+                  if (data.status === 'completed') {
+                     console.log(`Song ${data.song_name} finished playing`)
+                  } else if (data.status === 'error') {
+                     console.error(`Error playing song ${data.song_name}: ${data.error}`)
+                  }
+               }
+               if (data.type === 'tick') {
+                  const now = performance.now()
+
+                  // Reset history if there's a big jump in ticks
+                  if (this.currentTick !== null) {
+                     const expectedNextTick = this.currentTick + (this.ticksPerSecond || 0)
+                     const jumpDetected = Math.abs(data.tick - expectedNextTick) > 10
+
+                     if (jumpDetected) {
+                        this.tickHistory = []
+                        this.ticksPerSecond = null
+                     }
+                  }
+
+                  this.tickHistory.push({ tick: data.tick, time: now })
+
+                  // Keep only last 3 ticks for rate calculation
+                  if (this.tickHistory.length > 3) {
+                     this.tickHistory.shift()
+                  }
+
+                  // Calculate ticks per second after we have at least 2 measurements
+                  if (this.tickHistory.length >= 2) {
+                     const newest = this.tickHistory[this.tickHistory.length - 1]
+                     const oldest = this.tickHistory[0]
+                     const timeDiff = (newest.time - oldest.time) / 1000 // Convert to seconds
+                     const tickDiff = newest.tick - oldest.tick
+                     this.ticksPerSecond = tickDiff / timeDiff
+                  }
+
+                  this.currentTick = data.tick
+                  this.lastTickTime = now
+
+                  // Start animation if not already running
+                  if (!this.cursorAnimationFrame) {
+                     this.animateCursor()
+                  }
+               }
+               if (data.type === 'nano_registration') {
+                  await this.fetchNanoStatus()
+               }
+               if (data.type === 'midi_event') {
+                  this.lastMidiEvent = this.getBeschriftung(data.settings.effect)
+                  setTimeout(() => {
+                     this.lastMidiEvent = null
+                  }, 2000)
+               }
+               if (data.type === 'hold_status') {
+                  this.isHolding = data.is_holding
+               }
+            },
+
+            animateCursor () {
+               const animate = () => {
+                  if (this.currentTick !== null && !this.isHolding) {
+                     let estimatedTick = this.currentTick
+
+                     if (this.lastTickTime) {
+                        const now = performance.now()
+                        const timeSinceLastTick = (now - this.lastTickTime) / 1000 // Convert to seconds
+                        let additionalTicks = 0
+
+                        // Get starting tempo
+                        let currentTempo = this.getCurrentTempo(this.currentTick)
+
+                        // Check for tempo changes between currentTick and estimated position
+                        if (this.currentSongDetails && this.currentSongDetails.tempoChanges) {
+                           const sortedChanges = [...this.currentSongDetails.tempoChanges]
+                              .sort((a, b) => a.tick - b.tick)
+
+                           let remainingTime = timeSinceLastTick
+                           let lastProcessedTick = this.currentTick
+
+                           for (const change of sortedChanges) {
+                              if (change.tick > this.currentTick) {
+                                 // Calculate ticks until tempo change
+                                 const ticksPerSecond = (currentTempo * 96) / 60
+                                 const timeToChange = (change.tick - lastProcessedTick) / ticksPerSecond
+
+                                 if (remainingTime >= timeToChange) {
+                                    // We reach this tempo change
+                                    additionalTicks += (change.tick - lastProcessedTick)
+                                    remainingTime -= timeToChange
+                                    currentTempo = change.tempo
+                                    lastProcessedTick = change.tick
+                                 } else {
+                                    // We don't reach this tempo change
+                                    additionalTicks += remainingTime * ticksPerSecond
+                                    remainingTime = 0
+                                    break
+                                 }
+                              }
+                           }
+
+                           // Process remaining time with final tempo
+                           if (remainingTime > 0) {
+                              const ticksPerSecond = (currentTempo * 96) / 60
+                              additionalTicks += remainingTime * ticksPerSecond
+                           }
+
+                           estimatedTick = this.currentTick + Math.round(additionalTicks)
+                        } else {
+                           // Fallback for no tempo changes
+                           const ticksPerSecond = (currentTempo * 96) / 60
+                           estimatedTick = this.currentTick + Math.round(timeSinceLastTick * ticksPerSecond)
+                        }
+                     }
+
+                     this.updateTimelineProgress(Math.round(estimatedTick))
+                  }
+                  this.cursorAnimationFrame = requestAnimationFrame(animate)
+               }
+
+               animate()
+            },
+
+            updateTimelineProgress (tick) {
+               const parts = document.querySelectorAll('#timeline > div')
+               let activePart = null
+
+               parts.forEach(part => {
+                  const startTick = parseInt(part.getAttribute('data-start-tick'))
+                  const endTick = parseInt(part.getAttribute('data-end-tick'))
+                  const progressIndicator = part.querySelector('div')
+
+                  if (tick >= startTick && tick <= endTick) {
+                     part.classList.remove('bg-blue-700')
+                     part.classList.add('bg-red-500')
+                     activePart = part
+
+                     if (this.isHolding) {
+                        // Wenn hold aktiv ist, Cursor blinken lassen
+                        if (!this.cursorBlinkInterval) {
+                           this.cursorBlinkInterval = setInterval(() => {
+                              progressIndicator.classList.toggle('hidden')
+                           }, 500) // Blinken alle 500ms
+                        }
+                     } else {
+                        // Normales Verhalten
+                        if (this.cursorBlinkInterval) {
+                           clearInterval(this.cursorBlinkInterval)
+                           this.cursorBlinkInterval = null
+                        }
+                        const progress = (tick - startTick) / (endTick - startTick)
+                        const leftPosition = progress * 100
+                        progressIndicator.style.transition = 'none'
+                        progressIndicator.style.left = `${leftPosition}%`
+                        progressIndicator.classList.remove('hidden')
+                     }
+                  } else {
+                     part.classList.remove('bg-red-500')
+                     part.classList.add('bg-blue-700')
+                     progressIndicator.classList.add('hidden')
+                  }
+               })
+
+               // Scroll active part into view
+               if (activePart && this.lastActivePart !== activePart) {
+                  this.lastActivePart = activePart
+                  activePart.scrollIntoView({
+                     behavior: 'smooth',
+                     block: 'center',
+                     inline: 'center'
+                  })
+               }
+            },
+
+            async fetchSongs () {
+               try {
+                  const response = await fetch(`http://${this.currentEnvironment}/songs`)
+                  const data = await response.json()
+                  this.songs = data.songs
+               } catch (error) {
+                  console.error('Error fetching songs:', error)
+               }
+            },
+
+            async loadSong (songName) {
+               this.loadingStatus.show = true
+               this.loadingStatus.text = 'LADEN...'
+               this.selectedSongTitle = songName
+               this.showSidebar = false // Hide sidebar when loading song
+
+               try {
+                  const response = await fetch(`http://${this.currentEnvironment}/songs/${songName}/load`, {
+                     method: 'POST'
+                  })
+                  const data = await response.json()
+
+                  if (data.status === 'success') {
+                     this.loadingStatus.text = 'GELADEN!'
+                     this.showPlayButton = true
+                     this.showNextButton = false
+                     this.showStopButton = true
+                     this.currentSongDetails = data.details
+                     this.displayTimeline(data.details.tracks)
+                  }
+               } catch (error) {
+                  console.error('Error loading song:', error)
+                  this.loadingStatus.text = 'ERROR!'
+               }
+            },
+
+            displayTimeline (tracks) {
+               const timeline = document.getElementById('timeline')
+               timeline.innerHTML = ''
+
+               let maxDuration = 0
+               tracks.forEach(track => {
+                  track.parts.forEach(part => {
+                     const duration = part.end.seconds - part.start.seconds
+                     maxDuration = Math.max(maxDuration, duration)
+                  })
+               })
+
+               tracks.forEach(track => {
+                  track.parts.forEach(part => {
+                     const duration = part.end.seconds - part.start.seconds
+                     const width = Math.min(((duration / maxDuration) * 100), 100).toFixed(1)
+                     const partElement = document.createElement('div')
+                     partElement.className = 'bg-blue-700 h-10 rounded text-white text-lg font-bold p-1 relative overflow-hidden'
+                     partElement.style.width = `${width}%`
+                     partElement.setAttribute('data-start-tick', part.start.tick)
+                     partElement.setAttribute('data-end-tick', part.end.tick)
+
+                     // Add progress indicator
+                     const progressIndicator = document.createElement('div')
+                     progressIndicator.className = 'absolute top-0 left-0 bottom-0 w-1 bg-yellow-300 hidden'
+                     progressIndicator.style.transition = 'left 0.1s linear'
+                     partElement.appendChild(progressIndicator)
+
+                     // Add 30% marker line
+                     const thirtyPercentMarker = document.createElement('div')
+                     thirtyPercentMarker.className = 'absolute top-0 bottom-0 border-l-2 border-white border-dashed'
+                     thirtyPercentMarker.style.left = '30%'
+                     thirtyPercentMarker.title = 'Before this line: Jump to start\nAfter this line: Jump to next part'
+                     partElement.appendChild(thirtyPercentMarker)
+
+                     // Add text content with separate styling for name, ticks and tempo
+                     const textContent = document.createElement('div')
+                     textContent.className = 'flex flex-col h-full justify-between relative z-10'
+
+                     const partName = document.createElement('span')
+                     partName.className = 'text-3xl font-bold'
+                     partName.textContent = part.part_name
+
+                     const tickInfo = document.createElement('div')
+                     tickInfo.className = 'text-xs'
+
+                     // Add tick range and initial tempo
+                     const startTempo = this.getCurrentTempo(part.start.tick)
+                     const tickRange = document.createElement('span')
+                     tickRange.className = 'text-blue-200'
+                     tickRange.textContent = `${part.start.tick}-${part.end.tick}`
+
+                     const tempoInfo = document.createElement('span')
+                     tempoInfo.className = 'text-yellow-300 ml-2'
+                     tempoInfo.textContent = `${startTempo} BPM`
+
+                     tickInfo.appendChild(tickRange)
+                     tickInfo.appendChild(tempoInfo)
+
+                     textContent.appendChild(partName)
+                     textContent.appendChild(tickInfo)
+                     partElement.appendChild(textContent)
+
+                     // Add click handler for jumping to part
+                     partElement.addEventListener('click', async () => {
+                        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+                           this.tickHistory = []
+                           this.ticksPerSecond = null
+                           this.lastTickTime = null
+
+                           this.socket.send(JSON.stringify({
+                              type: 'jump_to_tick',
+                              tick: part.start.tick
+                           }))
+                        }
+                     })
+
+                     // Add tempo change markers if they exist within this part
+                     if (this.currentSongDetails && this.currentSongDetails.tempoChanges) {
+                        this.currentSongDetails.tempoChanges.forEach(change => {
+                           if (change.tick >= part.start.tick && change.tick <= part.end.tick) {
+                              const relativePosition = (change.tick - part.start.tick) / (part.end.tick - part.start.tick)
+                              const tempoMarker = document.createElement('div')
+                              tempoMarker.className = 'absolute top-0 bottom-0 border-l-2 border-red-800 border-dashed'
+                              tempoMarker.style.left = `${relativePosition * 100}%`
+
+                              // Add tempo tooltip
+                              const tooltip = document.createElement('div')
+                              tooltip.className = 'absolute bottom-full mb-1 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-2 py-1 rounded text-xs whitespace-nowrap'
+                              tooltip.textContent = `→ ${change.tempo} BPM`
+                              tempoMarker.appendChild(tooltip)
+
+                              // Add tempo label at the bottom
+                              const bottomLabel = document.createElement('div')
+                              bottomLabel.className = 'absolute top-full mt-1 left-1/2 transform -translate-x-1/2 text-red-500 text-xs font-bold whitespace-nowrap'
+                              bottomLabel.textContent = `${change.tempo} BPM`
+                              tempoMarker.appendChild(bottomLabel)
+
+                              partElement.appendChild(tempoMarker)
+                           }
+                        })
+                     }
+
+                     // Add tick markers
+                     for (let tick = part.start.tick; tick <= part.end.tick; tick++) {
+                        if (tick % 96 === 0) { // Check if it's a measure (every 96 ticks)
+                           const tickMarker = document.createElement('div')
+                           tickMarker.className = 'absolute text-white text-xs top-10'
+                           tickMarker.style.left = `${((tick - part.start.tick) / (part.end.tick - part.start.tick)) * 100}%`
+                           tickMarker.textContent = (tick % 384 === 0) ? '1' : '.' // Display '1' every 4th marker and at tick 0
+                           partElement.appendChild(tickMarker)
+                        }
+                     }
+
+                     timeline.appendChild(partElement)
+                  })
+               })
+            },
+
+            async playSong () {
+               try {
+                  await fetch(`http://${this.currentEnvironment}/songs/play`, { method: "POST" })
+                  this.showPlayButton = false
+                  this.showNextButton = true
+               } catch (error) {
+                  console.error(error)
+               }
+            },
+
+            async nextSong () {
+               if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+                  // Only reset calculations, keep currentTick for display
+                  this.tickHistory = []
+                  this.ticksPerSecond = null
+                  this.lastTickTime = null
+
+                  this.socket.send(JSON.stringify({
+                     type: 'next'
+                  }))
+               }
+            },
+
+            async stopSong () {
+               try {
+                  await fetch(`http://${this.currentEnvironment}/songs/stop`, { method: "POST" })
+
+                  // Reset all UI state
+                  this.selectedSongTitle = 'Wähle ein Song'
+                  this.showPlayButton = false
+                  this.showNextButton = false
+                  this.showStopButton = false
+                  this.loadingStatus.show = false
+                  this.currentSongDetails = null
+                  this.currentTick = null
+                  this.tickHistory = []
+                  this.ticksPerSecond = null
+                  this.lastTickTime = null
+                  this.showSidebar = true // Show sidebar when stopping song
+
+                  // Stop animation
+                  if (this.cursorAnimationFrame) {
+                     cancelAnimationFrame(this.cursorAnimationFrame)
+                     this.cursorAnimationFrame = null
+                  }
+
+                  // Clear timeline
+                  const timeline = document.getElementById('timeline')
+                  if (timeline) {
+                     timeline.innerHTML = ''
+                  }
+
+               } catch (error) {
+                  console.error(error)
+               }
+            },
+
+            setLabelFilter (label) {
+               this.activeLabel = label
+               localStorage.setItem('selectedLabel', label)
+            },
+
+            async fetchCurrentSong () {
+               try {
+                  const response = await fetch(`http://${this.currentEnvironment}/songs/current`)
+                  const data = await response.json()
+                  console.log(data)
+
+                  if (data.status === 'success' && data.details) {
+                     this.selectedSongTitle = data.details.name
+
+                     if (data.details.tracks) {
+                        this.loadingStatus.text = 'GELADEN!'
+                        this.showPlayButton = true
+                        this.showNextButton = true
+                        this.showStopButton = true
+                        setTimeout(() => {
+                           this.currentSongDetails = data.details
+                           this.displayTimeline(data.details.tracks)
+                        }, 100)
+                     }
+                  }
+               } catch (error) {
+                  console.error('Error fetching current song:', error)
+               }
+            },
+
+            getCurrentTempo (tick) {
+               if (!this.currentSongDetails || !this.currentSongDetails.tempoChanges) {
+                  return 120 // Default tempo if no data available
+               }
+
+               let currentTempo = this.currentSongDetails.tempo // Start with master tempo
+
+               // Sort tempo changes by tick and find the last tempo change before current tick
+               const sortedChanges = [...this.currentSongDetails.tempoChanges]
+                  .sort((a, b) => a.tick - b.tick)
+
+               for (const change of sortedChanges) {
+                  if (change.tick <= tick && change.tempo > 0) {
+                     currentTempo = change.tempo
+                  } else if (change.tick > tick) {
+                     break
+                  }
+               }
+
+               return currentTempo
+            },
+
+            dragStart (e) {
+               this.isDragging = true
+               this.draggedElement = e.currentTarget
+               this.draggedElement.classList.add('bg-gray-100')
+               this.originalOrder = [...document.querySelectorAll('#sortable-songs tr')]
+                  .map(row => row.dataset.songName)
+            },
+
+            dragMove (e) {
+               if (!this.isDragging) return
+
+               const rows = document.querySelectorAll('#sortable-songs tr')
+               const draggedRect = this.draggedElement.getBoundingClientRect()
+               const draggedMiddle = draggedRect.top + draggedRect.height / 2
+
+               rows.forEach(row => {
+                  if (row === this.draggedElement) return
+
+                  const rect = row.getBoundingClientRect()
+                  if (e.clientY < rect.bottom && e.clientY > rect.top) {
+                     if (draggedMiddle < rect.top) {
+                        row.parentNode.insertBefore(this.draggedElement, row)
+                     } else {
+                        row.parentNode.insertBefore(this.draggedElement, row.nextSibling)
+                     }
+                  }
+               })
+            },
+
+            async dragEnd () {
+               if (!this.isDragging) return
+               this.isDragging = false
+               this.draggedElement.classList.remove('bg-gray-100')
+
+               const newOrder = [...document.querySelectorAll('#sortable-songs tr')]
+                  .map((row, index) => [row.dataset.songName, index + 1])
+
+               // Update order in backend
+               try {
+                  const orderData = Object.fromEntries(newOrder)
+                  await fetch(`http://${this.currentEnvironment}/songs/order`, {
+                     method: 'PUT',
+                     headers: {
+                        'Content-Type': 'application/json',
+                     },
+                     body: JSON.stringify(orderData)
+                  })
+
+                  // Update local song data with new orders
+                  this.songs.forEach(song => {
+                     song.order = orderData[song.name]
+                  })
+               } catch (error) {
+                  console.error('Failed to update song order:', error)
+                  // Revert to original order if update fails
+                  const tbody = document.querySelector('#sortable-songs')
+                  this.originalOrder.forEach(songName => {
+                     const row = [...tbody.children].find(r => r.dataset.songName === songName)
+                     tbody.appendChild(row)
+                  })
+               }
+
+               this.draggedElement = null
+               this.originalOrder = null
+            },
+
+            async holdSong () {
+               this.isHolding = true
+               if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+                  this.socket.send(JSON.stringify({
+                     type: 'hold'
+                  }))
+               }
+            },
+
+            async releaseHold () {
+               if (this.isHolding) {
+                  // Clear blinking interval
+                  if (this.cursorBlinkInterval) {
+                     clearInterval(this.cursorBlinkInterval)
+                     this.cursorBlinkInterval = null
+                  }
+
+                  this.isHolding = false
+                  await this.nextSong() // Automatically go to next part when releasing hold
+               }
+            },
+            getBeschriftung (kanal) {
+               const effekte = {
+                  30: "Lauflicht",
+                  31: "Glitzern",
+                  32: "Lauflicht alternierend",
+                  33: "Pulsieren",
+                  34: "Starlight Drift",
+                  35: "Strobo",
+                  36: "Regenbogen",
+                  37: "Pulsierende Ripples",
+                  38: "Meteor",
+                  39: "Flackern",
+                  40: "Komet",
+                  41: "Doppler Effekt",
+                  42: "Feuerwerk",
+                  43: "DNA-Helix",
+                  44: "DNA-Helix mit Weiss",
+                  45: "leer",
+                  46: "leer",
+                  47: "leer",
+                  50: "Random",
+                  51: "Wellenüberlauf",
+                  52: "Asynchrones Pulsieren",
+                  53: "Farbexplosion"
+               }
+
+               return effekte[kanal] || "Unbekannter Kanal"
+            }
+         },
+
+         computed: {
+            filteredSongs () {
+               if (this.activeLabel === 'Alle') {
+                  return this.songs
+               } else {
+                  return this.songs.filter(song => song.label === this.activeLabel)
+               }
+            },
+            sortedSongs () {
+               return [...this.filteredSongs].sort((a, b) => {
+                  return (a.order || 0) - (b.order || 0)
+               })
+            }
+         },
+
+         mounted () {
+            this.connectWebSocket()
+            this.fetchSongs()
+         },
+
+         beforeUnmount () {
+            if (this.cursorAnimationFrame) {
+               cancelAnimationFrame(this.cursorAnimationFrame)
+            }
+            if (this.cursorBlinkInterval) {
+               clearInterval(this.cursorBlinkInterval)
+            }
+         }
+      })
+
+      app.mount('#app')
+   </script>
+</body>
+
+</html>
