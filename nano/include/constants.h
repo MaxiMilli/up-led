@@ -1,4 +1,155 @@
 #pragma once
 
-constexpr const int kOnboardButtonPin = 0;
-constexpr const int kOnboardLedPin = 5;
+#include <Arduino.h>
+
+constexpr int kOnboardButtonPin = 0;
+constexpr int kOnboardLedPin = 2;
+
+constexpr size_t kFrameSize = 16;
+constexpr size_t kSerialFrameSize = 18;
+constexpr uint8_t kSerialStartByte = 0xAA;
+
+constexpr uint8_t kWifiChannel = 11;
+constexpr uint32_t kHeartbeatInterval = 5000;
+constexpr uint32_t kHeartbeatTimeout = 15000;
+constexpr uint32_t kActiveTimeout = 60000;
+
+constexpr uint32_t kButtonLongPressMs = 500;
+constexpr uint32_t kPairingTimeoutMs = 30000;
+constexpr uint32_t kPairingRequestIntervalMs = 500;
+
+constexpr size_t kIdempotencyBufferSize = 32;
+constexpr uint8_t kMaxMeshTTL = 3;
+constexpr uint8_t kDefaultMeshTTL = 1;
+constexpr uint32_t kRebroadcastJitterMax = 50;
+constexpr uint32_t kRebroadcastMinGap = 100;
+
+// TTL is stored in upper 4 bits of flags byte
+constexpr uint8_t kTTLMask = 0xF0;
+constexpr uint8_t kTTLShift = 4;
+constexpr uint8_t kFlagsMask = 0x0F;
+
+inline uint8_t GetTTL(uint8_t flagsByte) { return (flagsByte & kTTLMask) >> kTTLShift; }
+inline uint8_t GetFlags(uint8_t flagsByte) { return flagsByte & kFlagsMask; }
+inline uint8_t MakeFlagsByte(uint8_t ttl, uint8_t flags) { return ((ttl << kTTLShift) & kTTLMask) | (flags & kFlagsMask); }
+
+// CRC-8 lookup table (polynomial 0x07, init 0x00)
+static const uint8_t kCRC8Table[256] PROGMEM = {
+    0x00, 0x07, 0x0E, 0x09, 0x1C, 0x1B, 0x12, 0x15, 0x38, 0x3F, 0x36, 0x31, 0x24, 0x23, 0x2A, 0x2D,
+    0x70, 0x77, 0x7E, 0x79, 0x6C, 0x6B, 0x62, 0x65, 0x48, 0x4F, 0x46, 0x41, 0x54, 0x53, 0x5A, 0x5D,
+    0xE0, 0xE7, 0xEE, 0xE9, 0xFC, 0xFB, 0xF2, 0xF5, 0xD8, 0xDF, 0xD6, 0xD1, 0xC4, 0xC3, 0xCA, 0xCD,
+    0x90, 0x97, 0x9E, 0x99, 0x8C, 0x8B, 0x82, 0x85, 0xA8, 0xAF, 0xA6, 0xA1, 0xB4, 0xB3, 0xBA, 0xBD,
+    0xC7, 0xC0, 0xC9, 0xCE, 0xDB, 0xDC, 0xD5, 0xD2, 0xFF, 0xF8, 0xF1, 0xF6, 0xE3, 0xE4, 0xED, 0xEA,
+    0xB7, 0xB0, 0xB9, 0xBE, 0xAB, 0xAC, 0xA5, 0xA2, 0x8F, 0x88, 0x81, 0x86, 0x93, 0x94, 0x9D, 0x9A,
+    0x27, 0x20, 0x29, 0x2E, 0x3B, 0x3C, 0x35, 0x32, 0x1F, 0x18, 0x11, 0x16, 0x03, 0x04, 0x0D, 0x0A,
+    0x57, 0x50, 0x59, 0x5E, 0x4B, 0x4C, 0x45, 0x42, 0x6F, 0x68, 0x61, 0x66, 0x73, 0x74, 0x7D, 0x7A,
+    0x89, 0x8E, 0x87, 0x80, 0x95, 0x92, 0x9B, 0x9C, 0xB1, 0xB6, 0xBF, 0xB8, 0xAD, 0xAA, 0xA3, 0xA4,
+    0xF9, 0xFE, 0xF7, 0xF0, 0xE5, 0xE2, 0xEB, 0xEC, 0xC1, 0xC6, 0xCF, 0xC8, 0xDD, 0xDA, 0xD3, 0xD4,
+    0x69, 0x6E, 0x67, 0x60, 0x75, 0x72, 0x7B, 0x7C, 0x51, 0x56, 0x5F, 0x58, 0x4D, 0x4A, 0x43, 0x44,
+    0x19, 0x1E, 0x17, 0x10, 0x05, 0x02, 0x0B, 0x0C, 0x21, 0x26, 0x2F, 0x28, 0x3D, 0x3A, 0x33, 0x34,
+    0x4E, 0x49, 0x40, 0x47, 0x52, 0x55, 0x5C, 0x5B, 0x76, 0x71, 0x78, 0x7F, 0x6A, 0x6D, 0x64, 0x63,
+    0x3E, 0x39, 0x30, 0x37, 0x22, 0x25, 0x2C, 0x2B, 0x06, 0x01, 0x08, 0x0F, 0x1A, 0x1D, 0x14, 0x13,
+    0xAE, 0xA9, 0xA0, 0xA7, 0xB2, 0xB5, 0xBC, 0xBB, 0x96, 0x91, 0x98, 0x9F, 0x8A, 0x8D, 0x84, 0x83,
+    0xDE, 0xD9, 0xD0, 0xD7, 0xC2, 0xC5, 0xCC, 0xCB, 0xE6, 0xE1, 0xE8, 0xEF, 0xFA, 0xFD, 0xF4, 0xF3
+};
+
+inline uint8_t CalculateCRC8(const uint8_t *data, size_t len) {
+    uint8_t crc = 0x00;
+    for (size_t i = 0; i < len; i++) {
+        crc = pgm_read_byte(&kCRC8Table[crc ^ data[i]]);
+    }
+    return crc;
+}
+
+namespace Flag
+{
+   constexpr uint8_t kPriority = 0x01;
+   constexpr uint8_t kForce = 0x02;
+   constexpr uint8_t kSync = 0x04;
+   constexpr uint8_t kNoRebroadcast = 0x08;
+}
+
+namespace Group
+{
+   constexpr uint16_t kAll = 0x0001;
+   constexpr uint16_t kGroup1 = 0x0002;
+   constexpr uint16_t kGroup2 = 0x0004;
+   constexpr uint16_t kGroup3 = 0x0008;
+   constexpr uint16_t kGroup4 = 0x0010;
+   constexpr uint16_t kGroup5 = 0x0020;
+   constexpr uint16_t kGroup6 = 0x0040;
+   constexpr uint16_t kGroup7 = 0x0080;
+   constexpr uint16_t kGroup8 = 0x0100;
+   constexpr uint16_t kGroup9 = 0x0200;
+   constexpr uint16_t kGroup10 = 0x0400;
+   constexpr uint16_t kGroup11 = 0x0800;
+   constexpr uint16_t kGroup12 = 0x1000;
+   constexpr uint16_t kGroup13 = 0x2000;
+   constexpr uint16_t kGroup14 = 0x4000;
+   constexpr uint16_t kGroup15 = 0x8000;
+   constexpr uint16_t kBroadcast = 0xFFFF;
+}
+
+// Instrument groups - clean 1-7 mapping (see PROTOCOL.md)
+namespace Instrument
+{
+   constexpr uint16_t kDrums       = 0x0002;  // Register 1 - bit 1
+   constexpr uint16_t kPauken      = 0x0004;  // Register 2 - bit 2
+   constexpr uint16_t kTschinellen = 0x0008;  // Register 3 - bit 3
+   constexpr uint16_t kLiras       = 0x0010;  // Register 4 - bit 4
+   constexpr uint16_t kTrompeten   = 0x0020;  // Register 5 - bit 5
+   constexpr uint16_t kPosaunen    = 0x0040;  // Register 6 - bit 6
+   constexpr uint16_t kBaesse      = 0x0080;  // Register 7 - bit 7
+}
+
+namespace Cmd
+{
+   constexpr uint8_t kNop = 0x00;
+   constexpr uint8_t kHeartbeat = 0x01;
+   constexpr uint8_t kPing = 0x02;
+   constexpr uint8_t kIdentify = 0x03;
+   constexpr uint8_t kSetLedCount = 0x04;
+   constexpr uint8_t kSetGroups = 0x05;
+   constexpr uint8_t kSaveConfig = 0x06;
+   constexpr uint8_t kReboot = 0x07;
+   constexpr uint8_t kFactoryReset = 0x0A;
+   constexpr uint8_t kSetMeshTTL = 0x0B;
+
+   constexpr uint8_t kStateOff = 0x10;
+   constexpr uint8_t kStateStandby = 0x11;
+   constexpr uint8_t kStateActive = 0x12;
+   constexpr uint8_t kStateEmergency = 0x13;
+   constexpr uint8_t kStateBlackout = 0x14;
+
+   constexpr uint8_t kEffectSolid = 0x20;
+   constexpr uint8_t kEffectBlink = 0x21;
+   constexpr uint8_t kEffectFade = 0x22;
+   constexpr uint8_t kEffectRainbow = 0x23;
+   constexpr uint8_t kEffectRainbowCycle = 0x24;
+   constexpr uint8_t kEffectChase = 0x25;
+   constexpr uint8_t kEffectTheaterChase = 0x26;
+   constexpr uint8_t kEffectTwinkle = 0x27;
+   constexpr uint8_t kEffectSparkle = 0x28;
+   constexpr uint8_t kEffectFire = 0x29;
+   constexpr uint8_t kEffectPulse = 0x2A;
+   constexpr uint8_t kEffectStrobe = 0x2B;
+   constexpr uint8_t kEffectGradient = 0x2C;
+   constexpr uint8_t kEffectWave = 0x2D;
+   constexpr uint8_t kEffectMeteor = 0x2E;
+   constexpr uint8_t kEffectBreathing = 0x2F;
+
+   constexpr uint8_t kPairingRequest = 0xA0;
+   constexpr uint8_t kPairingAckRecv = 0x81;
+   constexpr uint8_t kConfigSetRecv = 0x82;
+   constexpr uint8_t kConfigAck = 0x83;
+
+   constexpr uint8_t kDebugEcho = 0xF0;
+   constexpr uint8_t kDebugInfo = 0xF1;
+   constexpr uint8_t kDebugStress = 0xF2;
+}
+
+inline bool IsSystemCommand(uint8_t cmd) { return cmd <= 0x0F; }
+inline bool IsStateCommand(uint8_t cmd) { return cmd >= 0x10 && cmd <= 0x1F; }
+inline bool IsEffectCommand(uint8_t cmd) { return cmd >= 0x20 && cmd <= 0x3F; }
+inline bool IsPairingCommand(uint8_t cmd) { return cmd >= 0x80 && cmd <= 0x8F; }
+inline bool IsDebugCommand(uint8_t cmd) { return cmd >= 0xF0; }

@@ -2,6 +2,14 @@
 
 This project implements the central hub component for the Uzepatscher LED show control system. It runs on a Raspberry Pi and manages communication between the tablet interface and LED-equipped Nanos.
 
+```bash
+rsync -avz --exclude '__pycache__' --exclude '.git' --exclude 'venv' --exclude 'nano_info.json' \
+  ./ \
+  pi@192.168.1.195:~/uzepatscher-led-gwaendli/hub/
+ssh pi@192.168.1.195 "sudo systemctl restart led-hub"
+```
+
+
 ## Setup Instructions
 
 ### Prerequisites

@@ -15,6 +15,46 @@ from .tsn_parser import TSNParser
 
 PPQ = 96  # Ticks per Quarter Note (fix in TSN)
 
+# =============================================================================
+# MIDI Note to Unified Group Mapping (see PROTOCOL.md)
+# =============================================================================
+# This maps the original MIDI notes from TSN files to the new unified
+# instrument groups (1-7). Multiple notes can map to the same group
+# to merge "Person" and "Instrument" variants.
+#
+# Target Groups:
+#   1 = Drums, 2 = Pauken, 3 = Tschinellen, 4 = Liras,
+#   5 = Trompeten, 6 = Posaunen, 7 = Baesse
+#
+# Special: Note 1 (Ganze Gugge) maps to 0 which means "kAll" (broadcast)
+
+MIDI_NOTE_TO_GROUP = {
+    1: 0,   # Ganze Gugge → kAll (broadcast to all)
+    2: 1,   # Drums → Group 1 (Drums)
+    # Note 3 is empty/unused
+    4: 2,   # Pauken → Group 2 (Pauken)
+    5: 4,   # Lira → Group 4 (Liras)
+    6: 3,   # Chinellen → Group 3 (Tschinellen)
+    7: 5,   # 1. Trompete → Group 5 (Trompeten)
+    8: 5,   # 2. Trompete → Group 5 (Trompeten) ← MERGE
+    9: 6,   # 1. Posaune → Group 6 (Posaunen)
+    10: 6,  # 2. Posaune → Group 6 (Posaunen) ← MERGE
+    11: 6,  # 3. Posaune → Group 6 (Posaunen) ← MERGE
+    12: 7,  # Bässe → Group 7 (Baesse)
+    13: 7,  # Bässe Instrumente → Group 7 (Baesse) ← MERGE
+    14: 1,  # Wägeli Instrumente → Group 1 (Drums) ← zu Drums mappen
+    15: 2,  # Pauken Instrumente → Group 2 (Pauken) ← MERGE
+}
+
+def midi_note_to_group(note: int) -> int:
+    """
+    Convert MIDI note from TSN file to unified instrument group.
+
+    @param {int} note - Original MIDI note (1-15 for registers)
+    @returns {int} Unified group number (0=kAll, 1-7=instrument groups)
+    """
+    return MIDI_NOTE_TO_GROUP.get(note, note)
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # oder INFO in Produktion
 log_format = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
@@ -62,6 +102,7 @@ class SongPlayer:
         # Task-Referenzen für Playback und Broadcast
         self._playback_task: Optional[asyncio.Task] = None
         self._broadcast_task: Optional[asyncio.Task] = None
+        self._blackout_task: Optional[asyncio.Task] = None
 
         self._is_holding = False
 
@@ -162,6 +203,9 @@ class SongPlayer:
                 cmd = bytes([0x64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                 await self.nano_manager.broadcast_command(cmd)
 
+                # Starte Blackout-Loop (sendet jede Sekunde Blackout bis Song startet)
+                await self._start_blackout_loop()
+
                 return True
 
             except Exception as e:
@@ -184,24 +228,17 @@ class SongPlayer:
         Berücksichtigt eventuelle Tempo-Änderungen.
         """
         if not self.current_song:
-            return 120  # Fallback
-        
+            return 120
+
         current_tempo = self.current_song['musicProperties']['masterTempo']
         tempo_changes = self.current_song.get('tempoChanges', [])
-        
-        # Wichtig: Nur den letzten gültigen Tempo-Change vor dem aktuellen Tick nehmen
-        last_valid_change = None
+
         for change in sorted(tempo_changes, key=lambda x: x['tick']):
             if change['tick'] <= tick and change['tempo'] > 0:
-                last_valid_change = change
-            else:
+                current_tempo = change['tempo']
+            elif change['tick'] > tick:
                 break
-        
-        if last_valid_change:
-            if current_tempo != last_valid_change['tempo']:
-                logger.info(f"[Tempo Change] at tick {tick}: {current_tempo} -> {last_valid_change['tempo']} BPM")
-            current_tempo = last_valid_change['tempo']
-        
+
         return current_tempo
 
     def get_seconds_per_tick(self, tick: int) -> float:
@@ -234,9 +271,13 @@ class SongPlayer:
                 start_tick = 0
             
             logger.info(f"[play] Starte Song Playback ab Tick {start_tick}.")
+
+            # Stoppe Blackout-Loop
+            await self._stop_blackout_loop()
+
             self.is_playing = True
             self.current_tick = start_tick
-            
+
             # Haupt-Schleife als Task starten:
             self._playback_task = asyncio.create_task(self._playback_loop(command_manager))
 
@@ -281,7 +322,7 @@ class SongPlayer:
                 # (3) Check auf Tempo-Änderung
                 new_tempo = self.get_current_tempo(self.current_tick)
                 if new_tempo != current_tempo:
-                    # Bei Tempo-Änderung: Zeit-Basis neu setzen
+                    logger.info(f"[Tempo Change] at tick {self.current_tick}: {current_tempo} -> {new_tempo} BPM")
                     start_time = current_time
                     elapsed_ticks = 0
                     current_tempo = new_tempo
@@ -381,16 +422,15 @@ class SongPlayer:
             if self._broadcast_task:
                 self._broadcast_task.cancel()
 
-            # Reset-Befehl, Falls nötig:
-            cmd = bytes([0x64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-            await self.nano_manager.broadcast_command(cmd)
+            # Auch Blackout-Loop stoppen falls noch aktiv
+            await self._stop_blackout_loop()
+
             await self._on_playback_end()
 
     async def _on_playback_end(self):
         """
         Cleanup, wenn das Abspielen fertig ist (oder abgebrochen).
         """
-        # An WebSocket signalisieren
         if self.current_song:
             msg = {
                 "type": "playback_ended",
@@ -398,9 +438,19 @@ class SongPlayer:
                 "status": "completed"
             }
             await websocket_manager.broadcast_message(msg)
-            # Reset-Befehl, Falls nötig:
-            cmd = bytes([0x64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-            await self.nano_manager.broadcast_command(cmd)
+
+            # Sende Blackout an alle Nanos (target_register=None = GROUP_BROADCAST)
+            blackout_command = [
+                0x14,  # STATE_BLACKOUT
+                0, 0,  # duration
+                0,     # intensity
+                0, 0, 0,  # RGB
+                0,     # rainbow
+                0, 0,  # speed
+                0      # length
+            ]
+            await self.nano_manager.broadcast_command(blackout_command, target_register=None)
+
             logger.info(f"[on_playback_end] -> {msg}")
 
     async def _interruptible_sleep(self, duration: float) -> None:
@@ -486,7 +536,15 @@ class SongPlayer:
                 return True
 
             if 1 <= event.note <= 15:
-                logger.info(f"[Tick {self.current_tick}] Note OFF | Register {event.note}")
+                # Map old MIDI note to unified group
+                unified_group = midi_note_to_group(event.note)
+                if unified_group == 0:
+                    # kAll - broadcast to all (use register 1 which maps to GROUP_ALL)
+                    target_reg = 1
+                else:
+                    target_reg = unified_group
+
+                logger.info(f"[Tick {self.current_tick}] Note OFF | Note {event.note} → Group {unified_group}")
                 # Hier z.B. dein "Effect 100 (off)" Befehl an NanoManager
                 command = [
                     0x64,  # 100 = "off"
@@ -497,7 +555,7 @@ class SongPlayer:
                     0, 0,  # Speed
                     0,    # Length
                 ]
-                await self.nano_manager.broadcast_command(command, target_register=event.note)
+                await self.nano_manager.broadcast_command(command, target_register=target_reg)
                 await asyncio.create_task(websocket_manager.broadcast_message({
                     "type": "midi_event",
                     "tick": self.current_tick,
@@ -529,9 +587,16 @@ class SongPlayer:
             nt = event.note
             vel = event.velocity
 
-            # 1–15: Register ansteuern
+            # 1–15: Register ansteuern (map to unified groups)
             if 1 <= nt <= 15:
-                registers.append(nt)
+                unified = midi_note_to_group(nt)
+                if unified == 0:
+                    # kAll - use special handling or register 1
+                    registers.append(1)
+                else:
+                    # Only add if not already in list (avoid duplicates from merged notes)
+                    if unified not in registers:
+                        registers.append(unified)
             
             # 18–21: Farben
             elif nt == 18:  # Rot
@@ -590,3 +655,46 @@ class SongPlayer:
         """Unterbricht das Abspielen temporär"""
         self._is_holding = True
         logger.info("[hold] Playback temporarily paused")
+
+    async def _start_blackout_loop(self):
+        """Startet die Blackout-Loop, die jede Sekunde Blackout an alle Nanos sendet."""
+        # Erst bestehenden Task stoppen falls vorhanden
+        await self._stop_blackout_loop()
+
+        logger.info("[blackout_loop] Starte Blackout-Loop (Song geladen, wartet auf Start)")
+        self._blackout_task = asyncio.create_task(self._blackout_loop())
+
+    async def _stop_blackout_loop(self):
+        """Stoppt die Blackout-Loop."""
+        if self._blackout_task:
+            self._blackout_task.cancel()
+            try:
+                await self._blackout_task
+            except asyncio.CancelledError:
+                pass
+            self._blackout_task = None
+            logger.info("[blackout_loop] Blackout-Loop gestoppt")
+
+    async def _blackout_loop(self):
+        """Sendet jede Sekunde Blackout an alle Nanos bis der Song startet."""
+        try:
+            while True:
+                # Sende Blackout direkt an alle Nanos (target_register=None = GROUP_BROADCAST)
+                # Command 0x14 = STATE_BLACKOUT
+                blackout_command = [
+                    0x14,  # STATE_BLACKOUT
+                    0, 0,  # duration
+                    0,     # intensity
+                    0, 0, 0,  # RGB
+                    0,     # rainbow
+                    0, 0,  # speed
+                    0      # length
+                ]
+                await self.nano_manager.broadcast_command(blackout_command, target_register=None)
+                logger.debug("[blackout_loop] Blackout gesendet an alle Nanos")
+
+                await asyncio.sleep(1.0)  # Jede Sekunde
+        except asyncio.CancelledError:
+            logger.info("[blackout_loop] Loop abgebrochen")
+        except Exception as e:
+            logger.error(f"[blackout_loop] Fehler: {e}")

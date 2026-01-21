@@ -56,238 +56,168 @@
             </button>
          </div>
 
-         <!-- Global Color Control -->
-         <div class="mb-8">
-            <h3 class="text-xl font-bold mb-4">Globale Farbsteuerung</h3>
-            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
-               <div class="flex gap-4 items-center">
-                  <div
-                     class="w-24 h-24 rounded-lg"
-                     :style="{ backgroundColor: `rgb(${red}, ${green}, ${blue})` }"
-                  ></div>
-                  <div class="flex flex-col gap-4">
-                     <div class="flex items-center">
-                        <label class="w-20">Rot:</label>
-                        <input
-                           type="range"
-                           v-model="red"
-                           min="0"
-                           max="255"
-                           class="w-48"
-                        >
-                        <input
-                           type="number"
-                           v-model="red"
-                           min="0"
-                           max="255"
-                           class="w-24 ml-2"
-                        >
-                     </div>
-                     <div class="flex items-center">
-                        <label class="w-20">Grün:</label>
-                        <input
-                           type="range"
-                           v-model="green"
-                           min="0"
-                           max="255"
-                           class="w-48"
-                        >
-                        <input
-                           type="number"
-                           v-model="green"
-                           min="0"
-                           max="255"
-                           class="w-24 ml-2"
-                        >
-                     </div>
-                     <div class="flex items-center">
-                        <label class="w-20">Blau:</label>
-                        <input
-                           type="range"
-                           v-model="blue"
-                           min="0"
-                           max="255"
-                           class="w-48"
-                        >
-                        <input
-                           type="number"
-                           v-model="blue"
-                           min="0"
-                           max="255"
-                           class="w-24 ml-2"
-                        >
-                     </div>
-                  </div>
-               </div>
-            </div>
-         </div>
-
-         <!-- Manual Effects -->
-         <div class="mb-8">
-            <h3 class="text-xl font-bold mb-4">Manuelle Effekte</h3>
-            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
-               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div
-                     v-for="effect in manualEffects"
-                     :key="effect.id"
-                     class="p-4 border rounded-lg"
-                  >
-                     <h4 class="font-bold mb-2">{{ effect.name }}</h4>
-                     <p class="text-sm text-gray-600 mb-2">{{ effect.description }}</p>
-                     <div class="flex flex-col gap-2">
-                        <div
-                           v-if="effect.hasIntensity"
-                           class="flex items-center"
-                        >
-                           <label class="w-24">Intensität:</label>
-                           <input
-                              type="range"
-                              v-model="intensity"
-                              min="0"
-                              max="100"
-                              class="flex-1"
-                           >
-                        </div>
-                        <div
-                           v-if="effect.hasSpeed"
-                           class="flex items-center"
-                        >
-                           <label class="w-24">Geschwindigkeit:</label>
-                           <input
-                              type="range"
-                              v-model="speed"
-                              min="0"
-                              max="100"
-                              class="flex-1"
-                           >
-                        </div>
-                        <div
-                           v-if="effect.hasLength"
-                           class="flex items-center"
-                        >
-                           <label class="w-24">Länge:</label>
-                           <input
-                              type="number"
-                              v-model="length"
-                              min="1"
-                              class="w-20"
-                           >
-                        </div>
-                        <button
-                           class="bg-blue-500 text-white px-4 py-2 rounded mt-2"
-                           @click="sendEffect(effect.id)"
-                        >
-                           Effekt anwenden
-                        </button>
-                     </div>
-                  </div>
-               </div>
-            </div>
-         </div>
-
-         <!-- Effect Controls -->
-         <div class="mb-8">
-            <h3 class="text-xl font-bold mb-4">Effektsteuerung</h3>
-            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
-               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div
-                     v-for="effect in effects"
-                     :key="effect.id"
-                     class="p-4 border rounded-lg"
-                  >
-                     <h4 class="font-bold mb-2">{{ effect.name }}</h4>
-                     <p class="text-sm text-gray-600 mb-2">{{ effect.description }}</p>
-                     <div class="flex flex-col gap-2">
-                        <div
-                           v-if="effect.hasIntensity"
-                           class="flex items-center"
-                        >
-                           <label class="w-24">Intensität:</label>
-                           <input
-                              type="range"
-                              v-model="intensity"
-                              min="0"
-                              max="100"
-                              class="flex-1"
-                           >
-                        </div>
-                        <div
-                           v-if="effect.hasDuration"
-                           class="flex items-center"
-                        >
-                           <label class="w-24">Dauer:</label>
-                           <input
-                              type="number"
-                              v-model="duration"
-                              min="0"
-                              class="w-20"
-                           >
-                        </div>
-                        <div
-                           v-if="effect.hasSpeed"
-                           class="flex items-center"
-                        >
-                           <label class="w-24">Geschwindigkeit:</label>
-                           <input
-                              type="range"
-                              v-model="speed"
-                              min="0"
-                              max="100"
-                              class="flex-1"
-                           >
-                        </div>
-                        <div
-                           v-if="effect.hasLength"
-                           class="flex items-center"
-                        >
-                           <label class="w-24">Länge:</label>
-                           <input
-                              type="number"
-                              v-model="length"
-                              min="1"
-                              class="w-20"
-                           >
-                        </div>
-                        <button
-                           class="bg-blue-500 text-white px-4 py-2 rounded mt-2"
-                           @click="sendEffect(effect.id)"
-                        >
-                           Effekt anwenden
-                        </button>
-                     </div>
-                  </div>
-               </div>
-            </div>
-         </div>
-
          <!-- System Commands -->
          <div class="mb-8">
-            <h3 class="text-xl font-bold mb-4">Systembefehle</h3>
+            <h3 class="text-xl font-bold mb-4">System-Befehle</h3>
             <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
-               <div class="flex gap-4">
+               <div class="flex flex-wrap gap-4">
                   <button
-                     class="bg-red-500 text-white px-4 py-2 rounded"
-                     @click="sendEffect(100)"
+                     v-for="cmd in stateCommands"
+                     :key="cmd.id"
+                     class="text-white px-6 py-3 rounded font-bold"
+                     :class="{
+                        'bg-red-500 hover:bg-red-600': cmd.color === 'red',
+                        'bg-yellow-500 hover:bg-yellow-600': cmd.color === 'yellow',
+                        'bg-green-500 hover:bg-green-600': cmd.color === 'green',
+                        'bg-orange-500 hover:bg-orange-600': cmd.color === 'orange',
+                        'bg-gray-500 hover:bg-gray-600': cmd.color === 'gray'
+                     }"
+                     @click="sendEffect(cmd.id)"
                   >
-                     Ausschalten
+                     {{ cmd.name }}
                   </button>
+               </div>
+            </div>
+         </div>
+
+         <!-- Global Color Control -->
+         <div class="mb-8">
+            <h3 class="text-xl font-bold mb-4">Farb- und Effekt-Steuerung</h3>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
+               <div class="flex flex-wrap gap-8">
+                  <!-- Color Preview & RGB -->
+                  <div class="flex gap-4 items-start">
+                     <div
+                        class="w-24 h-24 rounded-lg border-2 border-gray-400"
+                        :style="{ backgroundColor: `rgb(${red}, ${green}, ${blue})` }"
+                     ></div>
+                     <div class="flex flex-col gap-2">
+                        <div class="flex items-center">
+                           <label class="w-16 text-red-600 font-bold">R:</label>
+                           <input
+                              type="range"
+                              v-model="red"
+                              min="0"
+                              max="255"
+                              class="w-32"
+                           >
+                           <input
+                              type="number"
+                              v-model="red"
+                              min="0"
+                              max="255"
+                              class="w-16 ml-2 text-center border rounded"
+                           >
+                        </div>
+                        <div class="flex items-center">
+                           <label class="w-16 text-green-600 font-bold">G:</label>
+                           <input
+                              type="range"
+                              v-model="green"
+                              min="0"
+                              max="255"
+                              class="w-32"
+                           >
+                           <input
+                              type="number"
+                              v-model="green"
+                              min="0"
+                              max="255"
+                              class="w-16 ml-2 text-center border rounded"
+                           >
+                        </div>
+                        <div class="flex items-center">
+                           <label class="w-16 text-blue-600 font-bold">B:</label>
+                           <input
+                              type="range"
+                              v-model="blue"
+                              min="0"
+                              max="255"
+                              class="w-32"
+                           >
+                           <input
+                              type="number"
+                              v-model="blue"
+                              min="0"
+                              max="255"
+                              class="w-16 ml-2 text-center border rounded"
+                           >
+                        </div>
+                     </div>
+                  </div>
+
+                  <!-- Effect Parameters -->
+                  <div class="flex flex-col gap-2">
+                     <div class="flex items-center">
+                        <label class="w-24">Intensität:</label>
+                        <input
+                           type="range"
+                           v-model="intensity"
+                           min="0"
+                           max="255"
+                           class="w-32"
+                        >
+                        <input
+                           type="number"
+                           v-model="intensity"
+                           min="0"
+                           max="255"
+                           class="w-16 ml-2 text-center border rounded"
+                        >
+                     </div>
+                     <div class="flex items-center">
+                        <label class="w-24">Speed (ms):</label>
+                        <input
+                           type="range"
+                           v-model="speed"
+                           min="10"
+                           max="2000"
+                           class="w-32"
+                        >
+                        <input
+                           type="number"
+                           v-model="speed"
+                           min="10"
+                           max="10000"
+                           class="w-16 ml-2 text-center border rounded"
+                        >
+                     </div>
+                     <div class="flex items-center">
+                        <label class="w-24">Länge:</label>
+                        <input
+                           type="range"
+                           v-model="length"
+                           min="1"
+                           max="50"
+                           class="w-32"
+                        >
+                        <input
+                           type="number"
+                           v-model="length"
+                           min="1"
+                           max="255"
+                           class="w-16 ml-2 text-center border rounded"
+                        >
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+
+         <!-- LED Effects Grid -->
+         <div class="mb-8">
+            <h3 class="text-xl font-bold mb-4">LED-Effekte</h3>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
+               <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                   <button
-                     class="bg-yellow-500 text-white px-4 py-2 rounded"
-                     @click="sendEffect(110)"
+                     v-for="effect in effects"
+                     :key="effect.id"
+                     class="p-4 border-2 rounded-lg hover:bg-blue-100 hover:border-blue-500 transition-colors"
+                     :class="{ 'bg-blue-50 border-blue-400': selectedEffect === effect.id }"
+                     @click="selectAndSendEffect(effect)"
                   >
-                     Initialisieren
-                  </button>
-                  <button
-                     class="bg-yellow-500 text-white px-4 py-2 rounded"
-                     @click="sendEffect(101)"
-                  >
-                     Standby
-                  </button>
-                  <button
-                     class="bg-green-500 text-white px-4 py-2 rounded"
-                     @click="sendEffect(102)"
-                  >
-                     Active Standby
+                     <div class="font-bold text-sm">{{ effect.name }}</div>
+                     <div class="text-xs text-gray-500 mt-1">0x{{ effect.id.toString(16).toUpperCase() }}</div>
                   </button>
                </div>
             </div>
@@ -307,107 +237,137 @@
                environment: localStorage.getItem('environment') || 'samuels-macbook-pro.local:8000',
                isConnected: false,
                socket: null,
-               // Color controls
+               selectedEffect: null,
                red: 255,
                green: 255,
                blue: 255,
-               // Effect controls
-               intensity: 100,
-               duration: 15,
-               speed: 20,
-               length: 1,
-               rainbow: 0,
-               // Effect definitions
+               intensity: 255,
+               speed: 100,
+               length: 4,
+               // LED-Effekte (0x20-0x2F)
                effects: [
-                  { id: 103, name: 'RGB', description: 'Set all LEDs to specified RGB color', hasIntensity: true },
-                  { id: 104, name: 'Rainbow', description: 'Configurable rainbow effect', hasSpeed: true, hasLength: true },
-                  { id: 105, name: 'Blink', description: 'Blink individual LEDs', hasSpeed: true, hasLength: true },
-                  // { id: 106, name: 'Single LED', description: 'Set individual LED', hasLength: true },
-                  // { id: 107, name: 'Additional LED', description: 'Set additional LED (must follow Single LED)', hasLength: true },
-               ],
-               // Manual Effects
-               manualEffects: [
                   {
-                     id: 30,
-                     name: 'Running Light',
-                     description: 'Moving light pattern with configurable group size',
-                     hasLength: true,
+                     id: 0x20,
+                     name: 'Solid',
+                     description: 'Statische Farbe',
+                     hasIntensity: true
+                  },
+                  {
+                     id: 0x21,
+                     name: 'Blink',
+                     description: 'Blinken',
                      hasIntensity: true,
                      hasSpeed: true
                   },
                   {
-                     id: 31,
-                     name: 'Glitter',
-                     description: 'Random sparkling effect with speed control',
+                     id: 0x22,
+                     name: 'Fade',
+                     description: 'Ein-/Ausfaden',
+                     hasIntensity: true,
+                     hasSpeed: true
+                  },
+                  {
+                     id: 0x23,
+                     name: 'Rainbow',
+                     description: 'Regenbogen',
+                     hasIntensity: true,
+                     hasSpeed: true
+                  },
+                  {
+                     id: 0x24,
+                     name: 'Rainbow Cycle',
+                     description: 'Regenbogen-Zyklus',
+                     hasIntensity: true,
+                     hasSpeed: true
+                  },
+                  {
+                     id: 0x25,
+                     name: 'Chase',
+                     description: 'Lauflicht',
+                     hasIntensity: true,
                      hasSpeed: true,
-                     hasIntensity: true
+                     hasLength: true
                   },
                   {
-                     id: 32,
-                     name: 'Wave',
-                     description: 'Wave pattern with edge dimming',
-                     hasLength: true,
+                     id: 0x26,
+                     name: 'Theater Chase',
+                     description: 'Theater-Lauflicht',
                      hasIntensity: true,
                      hasSpeed: true
                   },
                   {
-                     id: 33,
-                     name: 'Pulsate',
-                     description: 'Smooth pulsating effect',
-                     hasIntensity: true
+                     id: 0x27,
+                     name: 'Twinkle',
+                     description: 'Funkeln',
+                     hasIntensity: true,
+                     hasSpeed: true
                   },
                   {
-                     id: 35,
-                     name: 'Strobo',
-                     description: 'Strobe light effect',
-                     hasIntensity: true
+                     id: 0x28,
+                     name: 'Sparkle',
+                     description: 'Glitzern',
+                     hasIntensity: true,
+                     hasSpeed: true
                   },
                   {
-                     id: 37,
-                     name: 'Heartbeat',
-                     description: 'Realistic heartbeat pattern',
-                     hasIntensity: true
+                     id: 0x29,
+                     name: 'Fire',
+                     description: 'Feuer-Effekt',
+                     hasIntensity: true,
+                     hasSpeed: true
                   },
                   {
-                     id: 38,
+                     id: 0x2A,
+                     name: 'Pulse',
+                     description: 'Pulsieren',
+                     hasIntensity: true,
+                     hasSpeed: true
+                  },
+                  {
+                     id: 0x2B,
+                     name: 'Strobe',
+                     description: 'Stroboskop',
+                     hasIntensity: true,
+                     hasSpeed: true
+                  },
+                  {
+                     id: 0x2C,
+                     name: 'Gradient',
+                     description: 'Farbverlauf',
+                     hasIntensity: true,
+                     hasSpeed: true
+                  },
+                  {
+                     id: 0x2D,
+                     name: 'Wave',
+                     description: 'Welle',
+                     hasIntensity: true,
+                     hasSpeed: true,
+                     hasLength: true
+                  },
+                  {
+                     id: 0x2E,
                      name: 'Meteor',
-                     description: 'Meteor effect with configurable length',
-                     hasLength: true,
-                     hasIntensity: true
+                     description: 'Meteor/Sternschnuppe',
+                     hasIntensity: true,
+                     hasSpeed: true,
+                     hasLength: true
                   },
                   {
-                     id: 39,
-                     name: 'Flicker',
-                     description: 'Candlelight flicker effect',
-                     hasIntensity: true
-                  },
-                  {
-                     id: 40,
-                     name: 'Comet',
-                     description: 'Comet with bright head and fading tail',
-                     hasLength: true,
-                     hasIntensity: true
-                  },
-                  {
-                     id: 41,
-                     name: 'Doppler',
-                     description: 'Doppler effect with color shift',
-                     hasLength: true,
-                     hasIntensity: true
-                  },
-                  {
-                     id: 42,
-                     name: 'Firework',
-                     description: 'Firework explosion effect',
-                     hasIntensity: true
-                  },
-                  {
-                     id: 43,
-                     name: 'DNA Helix',
-                     description: 'Double helix pattern',
-                     hasLength: true,
-                     hasIntensity: true
+                     id: 0x2F,
+                     name: 'Breathing',
+                     description: 'Atmen (langsames Pulsieren)',
+                     hasIntensity: true,
+                     hasSpeed: true
                   }
+               ],
+               // State-Commands (0x10-0x14)
+               stateCommands: [
+                  { id: 0x10, name: 'Aus', color: 'red' },
+                  { id: 0x11, name: 'Standby', color: 'yellow' },
+                  { id: 0x12, name: 'Aktiv', color: 'green' },
+                  { id: 0x13, name: 'Notfall', color: 'orange' },
+                  { id: 0x14, name: 'Blackout', color: 'gray' }
                ]
             }
          },
@@ -426,15 +386,18 @@
                })
             },
 
+            selectAndSendEffect (effect) {
+               this.selectedEffect = effect.id
+               this.sendEffect(effect.id)
+            },
+
             sendEffect (effectId) {
                const command = {
                   effect: Number(effectId),
-                  duration: Number(this.duration),
                   intensity: Number(this.intensity),
                   red: Number(this.red),
                   green: Number(this.green),
                   blue: Number(this.blue),
-                  rainbow: Number(this.rainbow),
                   speed: Number(this.speed),
                   length: Number(this.length)
                }

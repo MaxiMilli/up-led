@@ -7,110 +7,321 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0"
    >
-   <title>SHOWTOOL</title>
+   <title>NANO KONFIGURATION</title>
    <script src="static/tailwind.js"></script>
    <link
       href="static/flowbite.css"
       rel="stylesheet"
    />
-   <script src="static/neodrag.js"></script>
    <script src="static/vue.js"></script>
-   <script
-      src="static/components/NanoCard.js"
-      type="module"
-   ></script>
+   <style>
+      [v-cloak] {
+         display: none;
+      }
+
+      .pulse-ring {
+         animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+      }
+
+      @keyframes pulse-ring {
+         0% {
+            transform: scale(0.8);
+            opacity: 1;
+         }
+
+         80%,
+         100% {
+            transform: scale(1.4);
+            opacity: 0;
+         }
+      }
+   </style>
 </head>
 
-<body class="bg-gray-100 h-screen p-4">
+<body class="bg-gray-100 min-h-screen">
    <div
       id="app"
-      class="antialiased bg-gray-50"
+      class="antialiased bg-gray-50 min-h-screen"
       v-cloak
    >
       <nav class="bg-white border-b border-gray-200 px-4 py-2.5 fixed left-0 right-0 top-0 z-50">
          <div class="flex flex-wrap justify-between items-center">
-            <div class="flex justify-start items-center">
-               <h1 class="text-3xl font-bold pr-8">NANO MANAGEMENT</h1>
-               <div>
-                  <span
-                     id="online-status"
-                     class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-green-800 bg-green-100 rounded"
-                     :class="{'opacity-100': isConnected, 'opacity-10': !isConnected}"
-                  >
-                     Online
-                  </span>
-                  <span
-                     id="offline-status"
-                     class="inline-flex items-center px-2 py-1 me-2 text-sm font-medium text-red-800 bg-red-100 rounded"
-                     :class="{'opacity-100': !isConnected, 'opacity-10': isConnected}"
-                  >
-                     Offline
-                  </span>
-               </div>
+            <div class="flex justify-start items-center gap-4">
+               <h1 class="text-2xl font-bold">NANO KONFIGURATION</h1>
+               <span
+                  class="inline-flex items-center px-2 py-1 text-sm font-medium rounded"
+                  :class="isConnected ? 'text-green-800 bg-green-100' : 'text-red-800 bg-red-100'"
+               >
+                  {{ isConnected ? 'Verbunden' : 'Offline' }}
+               </span>
             </div>
          </div>
       </nav>
 
-      <main class="p-4 h-auto pt-20">
-         <div class="flex justify-between items-center mb-8">
-            <button
-               class="bg-blue-500 text-white px-4 py-2 rounded"
-               onclick="window.history.back();"
-            >
-               Zurück
-            </button>
-         </div>
+      <main class="p-4 pt-20 max-w-4xl mx-auto">
+         <button
+            class="bg-gray-500 text-white px-4 py-2 rounded mb-8"
+            onclick="window.history.back();"
+         >
+            Zurück
+         </button>
 
-         <div class="mb-16">
-            <h3 class="text-xl font-bold mb-4">Guggen-Aufstellung</h3>
+         <section class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4">Nano Pairing</h2>
+
             <div
-               id="nano-position-area"
-               class="relative w-[900px] h-[400px] bg-gray-100 rounded-lg border-2 border-dashed border-gray-300"
+               v-if="!pairingMode"
+               class="text-center py-8"
             >
-               <!-- Draggable nano circles will be inserted here -->
+               <p class="text-gray-600 mb-6">
+                  Aktiviere den Pairing-Modus und drücke dann den Button auf dem Nano, den du konfigurieren möchtest.
+               </p>
+               <button
+                  @click="startPairing"
+                  class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg"
+               >
+                  Pairing starten
+               </button>
             </div>
-         </div>
 
-         <div class="mt-8 mb-16">
-            <h3 class="text-xl font-bold mb-4">Anwesende Gugger</h3>
             <div
-               id="nano-list"
-               class="flex flex-wrap gap-4"
+               v-else
+               class="text-center py-8"
             >
-               <nano-card
-                  v-for="(data, mac) in nanos"
+               <div v-if="!pendingMac">
+                  <div class="relative inline-flex mb-6">
+                     <div class="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center">
+                        <svg
+                           class="w-12 h-12 text-white animate-pulse"
+                           fill="none"
+                           stroke="currentColor"
+                           viewBox="0 0 24 24"
+                        >
+                           <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.14 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"
+                           ></path>
+                        </svg>
+                     </div>
+                     <div class="absolute inset-0 w-24 h-24 bg-blue-400 rounded-full pulse-ring"></div>
+                  </div>
+                  <p class="text-lg text-gray-700 mb-4">Warte auf Nano...</p>
+                  <p class="text-sm text-gray-500 mb-6">Drücke jetzt den Button auf dem Nano</p>
+                  <button
+                     @click="stopPairing"
+                     class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-6 rounded"
+                  >
+                     Abbrechen
+                  </button>
+               </div>
+
+               <div
+                  v-else
+                  class="text-left max-w-md mx-auto"
+               >
+                  <div class="flex items-center gap-3 mb-6 p-4 bg-green-100 rounded-lg">
+                     <div class="w-4 h-4 bg-green-500 rounded-full"></div>
+                     <span class="font-mono text-lg">{{ pendingMac }}</span>
+                     <span
+                        v-if="pendingConfig?.name"
+                        class="text-gray-600"
+                     >
+                        ({{ pendingConfig.name }})
+                     </span>
+                  </div>
+
+                  <form
+                     @submit.prevent="saveConfig"
+                     class="space-y-4"
+                  >
+                     <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                        <input
+                           v-model="configForm.name"
+                           type="text"
+                           placeholder="z.B. Hans Muster"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        >
+                     </div>
+
+                     <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Register / Gruppe</label>
+                        <select
+                           v-model.number="configForm.register"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        >
+                           <option :value="1">1 - Drums (0x0002)</option>
+                           <option :value="2">2 - Pauken (0x0004)</option>
+                           <option :value="3">3 - Tschinellen (0x0008)</option>
+                           <option :value="4">4 - Liras (0x0010)</option>
+                           <option :value="5">5 - Trompeten (0x0020)</option>
+                           <option :value="6">6 - Posaunen (0x0040)</option>
+                           <option :value="7">7 - Bässe (0x0080)</option>
+                        </select>
+                     </div>
+
+                     <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">LED Anzahl</label>
+                        <input
+                           v-model.number="configForm.led_count"
+                           type="number"
+                           min="1"
+                           max="300"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        >
+                     </div>
+
+                     <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Standby-Farbe</label>
+                        <div class="flex items-center gap-3">
+                           <input
+                              v-model="configForm.standby_color"
+                              type="color"
+                              class="w-16 h-10 border border-gray-300 rounded cursor-pointer"
+                           >
+                           <span class="text-sm text-gray-500">
+                              RGB({{ standbyR }}, {{ standbyG }}, {{ standbyB }})
+                           </span>
+                        </div>
+                     </div>
+
+                     <div class="flex gap-3 pt-4">
+                        <button
+                           type="submit"
+                           class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg"
+                           :disabled="saving"
+                        >
+                           {{ saving ? 'Speichern...' : 'Konfiguration senden' }}
+                        </button>
+                        <button
+                           type="button"
+                           @click="cancelConfig"
+                           class="bg-gray-500 hover:bg-gray-600 text-white py-3 px-6 rounded-lg"
+                        >
+                           Abbrechen
+                        </button>
+                     </div>
+                  </form>
+
+                  <div
+                     v-if="configSuccess"
+                     class="mt-4 p-4 bg-green-100 text-green-800 rounded-lg flex items-center gap-2"
+                  >
+                     <svg
+                        class="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                     >
+                        <path
+                           fill-rule="evenodd"
+                           d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                           clip-rule="evenodd"
+                        ></path>
+                     </svg>
+                     Konfiguration erfolgreich gesendet!
+                  </div>
+               </div>
+            </div>
+         </section>
+
+         <section class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">Registrierte Nanos ({{ Object.keys(nanos).length }})</h2>
+
+            <div
+               v-if="Object.keys(nanos).length === 0"
+               class="text-center py-8 text-gray-500"
+            >
+               Noch keine Nanos registriert
+            </div>
+
+            <div
+               v-else
+               class="space-y-3"
+            >
+               <div
+                  v-for="(nano, mac) in nanos"
                   :key="mac"
-                  :mac="mac"
-                  :data="data"
-                  @refresh="fetchNanoStatus"
-               ></nano-card>
+                  class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
+               >
+                  <div class="flex items-center gap-4">
+                     <div
+                        class="w-3 h-3 rounded-full"
+                        :class="nano.pairing_status === 'configured' ? 'bg-green-500' : 'bg-yellow-500'"
+                     ></div>
+                     <div>
+                        <div class="font-mono text-sm text-gray-600">{{ mac }}</div>
+                        <div class="font-medium">{{ nano.name || 'Unbenannt' }}</div>
+                     </div>
+                  </div>
+                  <div class="flex items-center gap-4 text-sm text-gray-600">
+                     <span>Register: {{ nano.register || '-' }}</span>
+                     <span>LEDs: {{ nano.led_count || '-' }}</span>
+                     <button
+                        @click="removeNano(mac)"
+                        class="text-red-600 hover:text-red-800 p-1"
+                        title="Nano entfernen"
+                     >
+                        <svg
+                           class="w-5 h-5"
+                           fill="none"
+                           stroke="currentColor"
+                           viewBox="0 0 24 24"
+                        >
+                           <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                           ></path>
+                        </svg>
+                     </button>
+                  </div>
+               </div>
             </div>
-         </div>
+         </section>
       </main>
    </div>
-
 
    <script src="./static/flowbite.min.js"></script>
 
    <script type="module">
-      import { NanoCard } from './static/components/NanoCard.js'
-
       const { createApp } = Vue
 
-      const app = createApp({
-         components: {
-            'nano-card': NanoCard
-         },
+      createApp({
          data () {
             return {
                environment: localStorage.getItem('environment') || 'samuels-macbook-pro.local:8000',
                isConnected: false,
                socket: null,
+               pairingMode: false,
+               pendingMac: null,
+               pendingConfig: null,
                nanos: {},
-               draggableNanos: new Map(),
-               statusPollInterval: null
+               configForm: {
+                  name: '',
+                  register: 1,  // Default: Drums
+                  led_count: 60,
+                  standby_color: '#0000ff'
+               },
+               saving: false,
+               configSuccess: false
             }
          },
+
+         computed: {
+            standbyR() {
+               return parseInt(this.configForm.standby_color.slice(1, 3), 16)
+            },
+            standbyG() {
+               return parseInt(this.configForm.standby_color.slice(3, 5), 16)
+            },
+            standbyB() {
+               return parseInt(this.configForm.standby_color.slice(5, 7), 16)
+            }
+         },
+
          methods: {
             connectWebSocket () {
                this.socket = new WebSocket(`ws://${this.environment}/ws`)
@@ -126,148 +337,128 @@
 
                this.socket.addEventListener('message', (event) => {
                   const data = JSON.parse(event.data)
-                  if (data.type === 'nano_registration') {
-                     this.fetchNanoStatus()
-                  }
+                  this.handleWebSocketMessage(data)
                })
             },
-            async fetchNanoStatus () {
+
+            handleWebSocketMessage (data) {
+               if (data.type === 'nano_pairing') {
+                  if (this.pendingMac === data.mac) {
+                     return
+                  }
+
+                  this.pendingMac = data.mac
+                  this.pendingConfig = data.current_config
+
+                  if (data.current_config) {
+                     this.configForm.name = data.current_config.name || ''
+                     this.configForm.register = data.current_config.register || 7
+                     this.configForm.led_count = data.current_config.led_count || 60
+                  }
+               }
+
+               if (data.type === 'nano_config_ack') {
+                  this.configSuccess = true
+                  setTimeout(() => {
+                     this.configSuccess = false
+                     this.resetPairing()
+                  }, 2000)
+               }
+
+               if (data.type === 'nano_info_updated') {
+                  this.fetchNanos()
+               }
+            },
+
+            async fetchNanos () {
                try {
                   const response = await fetch(`http://${this.environment}/nano/status`)
-                  const data = await response.json()
-                  this.nanos = data
-                  this.updateDraggableNanos(data)
+                  this.nanos = await response.json()
                } catch (error) {
-                  console.error('Error fetching nano status:', error)
+                  console.error('Error fetching nanos:', error)
                }
             },
-            updateDraggableNanos (nanos) {
-               const positionArea = document.getElementById('nano-position-area')
 
-               // Add a flag to track dragging state
-               let isDragging = false
-               let statusPollInterval
+            async startPairing () {
+               try {
+                  await fetch(`http://${this.environment}/nano/pairing/start`, { method: 'POST' })
+                  this.pairingMode = true
+                  this.pendingMac = null
+                  this.pendingConfig = null
+                  this.configSuccess = false
+               } catch (error) {
+                  console.error('Error starting pairing:', error)
+               }
+            },
 
-               // Remove nanos that are no longer connected
-               for (const [mac, draggable] of this.draggableNanos.entries()) {
-                  if (!nanos[mac]) {
-                     draggable.destroy()
-                     this.draggableNanos.delete(mac)
+            async stopPairing () {
+               try {
+                  await fetch(`http://${this.environment}/nano/pairing/stop`, { method: 'POST' })
+               } catch (error) {
+                  console.error('Error stopping pairing:', error)
+               }
+               this.resetPairing()
+            },
+
+            resetPairing () {
+               this.pairingMode = false
+               this.pendingMac = null
+               this.pendingConfig = null
+               this.configForm = { name: '', register: 1, led_count: 60, standby_color: '#0000ff' }
+            },
+
+            async saveConfig () {
+               if (!this.pendingMac) return
+
+               this.saving = true
+               try {
+                  const configData = {
+                     name: this.configForm.name,
+                     register: this.configForm.register,
+                     led_count: this.configForm.led_count,
+                     standby_r: this.standbyR,
+                     standby_g: this.standbyG,
+                     standby_b: this.standbyB
                   }
-               }
+                  const response = await fetch(`http://${this.environment}/nano/configure/${this.pendingMac}`, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify(configData)
+                  })
 
-               const GWAENDLI_COLOR_MAP = {
-                  'cyan': 'bg-cyan-500 text-white',
-                  'magenta': 'bg-pink-500 text-white',
-                  'yellow': 'bg-yellow-500 text-white'
-               }
-
-               // Update or create nanos
-               Object.entries(nanos).forEach(([mac, data]) => {
-                  const existingNano = positionArea.querySelector(`[data-mac="${mac}"]`)
-
-                  if (!existingNano) {
-                     // Create new nano circle
-                     const nanoCircle = document.createElement('div')
-                     const colorClass = GWAENDLI_COLOR_MAP[data.gwaendli_color] || 'bg-gray-500'
-                     nanoCircle.className = 'absolute w-12 h-12 rounded-full shadow-lg flex items-center justify-center cursor-move ' + colorClass
-                     nanoCircle.setAttribute('data-mac', mac)
-
-                     nanoCircle.innerHTML = `
-                        <span class="text-sm font-bold">${data.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'NA'}</span>
-                        <div class="status-dot absolute w-3 h-3 rounded-full -top-1 -left-1 m-1 ${data.status === 'active' ? 'bg-green-500' : 'bg-red-500'}"></div>
-                        <div class="instrument-emoji absolute w-4 h-4 -bottom-1 left-1/2 transform -translate-x-1/2">
-                           ${data.instrument === 'trumpet' ? '🎺' : data.instrument === 'drum' ? '🥁' : data.instrument === 'piano' ? '🎹' : '🪇'}
-                        </div>
-                     `
-
-                     // Add click event handler
-                     nanoCircle.addEventListener('click', () => {
-                        const nanoCard = document.querySelector(`.nano-card[data-mac="${mac}"]`)
-
-                        nanoCard.classList.add('ring-4', 'ring-black', 'ring-opacity-75')
-
-                        // Scrollt das gefundene Element in den sichtbaren Bereich
-                        nanoCard.scrollIntoView({
-                           behavior: 'smooth',
-                           block: 'start'
-                        })
-
-                        // Nach ein paar Sekunden den Ring wieder entfernen
-                        setTimeout(() => {
-                           nanoCard.classList.remove('ring-4', 'ring-black', 'ring-opacity-75')
-                        }, 7000)
-                     })
-
-                     positionArea.appendChild(nanoCircle)
-
-                     const draggable = new NeoDrag.Draggable(nanoCircle, {
-                        grid: [5, 5],
-                        containment: positionArea,
-                        defaultPosition: {
-                           x: data.position?.x ?? 20,
-                           y: data.position?.y ?? 20
-                        },
-                        onDragStart: () => {
-                           isDragging = true
-                           // Clear the interval when dragging starts
-                           clearInterval(statusPollInterval)
-                        },
-                        onDragEnd: () => {
-                           const rect = nanoCircle.getBoundingClientRect()
-                           const areaRect = positionArea.getBoundingClientRect()
-                           const position = {
-                              x: Math.round((rect.left - areaRect.left) / 25) * 25,
-                              y: Math.round((rect.top - areaRect.top) / 25) * 25
-                           }
-
-                           fetch(`http://${this.environment}/nano/update/${mac}`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ position })
-                           }).catch(error => {
-                              console.error('Error saving position:', error)
-                           }).finally(() => {
-                              isDragging = false
-                              // Restart the interval after dragging ends
-                              statusPollInterval = setInterval(() => !isDragging && this.fetchNanoStatus(), 5000)
-                           })
-                        },
-                     })
-
-                     this.draggableNanos.set(mac, draggable)
+                  if (response.ok) {
+                     await this.fetchNanos()
                   } else {
-                     // Update existing nano
-                     const nameSpan = existingNano.querySelector('span')
-                     nameSpan.textContent = data.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'NA'
-
-                     const colorClass = GWAENDLI_COLOR_MAP[data.gwaendli_color] || 'bg-gray-500'
-                     existingNano.className = 'absolute w-12 h-12 rounded-full shadow-lg flex items-center justify-center cursor-move ' + colorClass
-
-                     const instrumentEmoji = existingNano.querySelector('.instrument-emoji')
-                     instrumentEmoji.textContent = data.instrument === 'trumpet' ? '🎺' : data.instrument === 'drum' ? '🥁' : data.instrument === 'piano' ? '🎹' : '🪇'
-
-                     const statusDot = existingNano.querySelector('.status-dot')
-                     statusDot.className = `status-dot absolute w-3 h-3 rounded-full -top-1 -left-1 m-1 ${data.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`
-
-                     const left = data.position?.x ?? 20
-                     const top = data.position?.y ?? 20
-                     existingNano.style.translate = `${left}px ${top}px`
+                     alert('Fehler beim Senden der Konfiguration')
                   }
-               })
+               } catch (error) {
+                  console.error('Error saving config:', error)
+                  alert('Fehler beim Senden der Konfiguration')
+               }
+               this.saving = false
             },
+
+            cancelConfig () {
+               this.stopPairing()
+            },
+
+            async removeNano (mac) {
+               if (!confirm(`Nano ${mac} wirklich entfernen?`)) return
+
+               try {
+                  await fetch(`http://${this.environment}/nano/${mac}`, { method: 'DELETE' })
+                  await this.fetchNanos()
+               } catch (error) {
+                  console.error('Error removing nano:', error)
+               }
+            }
          },
+
          mounted () {
             this.connectWebSocket()
-            setTimeout(() => {
-               this.fetchNanoStatus()
-            }, 1000)
-            // Store the interval reference so it can be cleared
-            this.statusPollInterval = setInterval(() => this.fetchNanoStatus(), 5000)
+            this.fetchNanos()
          }
-      })
-
-      app.mount('#app')
+      }).mount('#app')
    </script>
 </body>
 

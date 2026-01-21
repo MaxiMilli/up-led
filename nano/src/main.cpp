@@ -1,38 +1,45 @@
 #include <Arduino.h>
 
-#include "wifi_connection.h"
-// #include "hub_connection.h"
-// #include "command.h"
-
+#include "button_handler.h"
 #include "constants.h"
+#include "eeprom_handler.h"
+#include "espnow_handler.h"
 #include "led_handler.h"
 #include "logging.h"
+#include "ota_handler.h"
 #include "states.h"
-#include "eeprom_handler.h"
 
-State current_state = kInit;
+State currentState = kInit;
 
 void setup()
 {
-  // configure on-board button and LED to be used
-  pinMode(kOnboardButtonPin, INPUT_PULLUP);
   pinMode(kOnboardLedPin, OUTPUT);
 
   InitializeLogging();
+  LOG("Nano starting...");
 
   InitializeEEPROM();
   InitializeLeds();
+  InitializeButton();
 
-  LOG("Starting");
-  ConnectToWifi();
+  // OTA check must happen BEFORE ESP-NOW init (uses WiFi in different mode)
+  CheckAndPerformOta();
+
+  if (!InitializeEspNow())
+  {
+    LOG("ESP-NOW init failed!");
+  }
+
+  LOG("Setup complete");
 }
 
 void loop()
 {
+  if (ProcessButton())
+  {
+    StartPairing();
+    currentState = kPairing;
+  }
 
-  HandleState(current_state);
-
-  // if (response_length == 11){
-  //   DecodeCommand(response_buffer);
-  // }
+  HandleState(currentState);
 }

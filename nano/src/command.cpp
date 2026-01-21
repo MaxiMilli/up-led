@@ -2,36 +2,31 @@
 
 #include "logging.h"
 
-Command DecodeCommand(uint8_t *message_buffer)
+Command ParseCommand(const uint8_t *buffer)
 {
-  Command message;
-  message.effect = message_buffer[0];
-  message.duration = (message_buffer[1] << 8) | message_buffer[2];
-  message.intensity = message_buffer[3];
-  message.red = message_buffer[4];
-  message.green = message_buffer[5];
-  message.blue = message_buffer[6];
-  message.rainbow = message_buffer[7];
-  message.speed = (message_buffer[8] << 8) | message_buffer[9];
-  message.length = message_buffer[10];
+  Command cmd;
 
-  // Print out the decoded values
-  LOG("Decoded Command:");
-  LOGF("  Effect: %d\n", message.effect);
-  LOGF("  Duration: %d\n", message.duration);
-  LOGF("  Intensity: %d\n", message.intensity);
-  LOGF("  Red: %d\n", message.red);
-  LOGF("  Green: %d\n", message.green);
-  LOGF("  Blue: %d\n", message.blue);
-  LOGF("  Rainbow: %d\n", message.rainbow);
-  LOGF("  Speed: %d\n", message.speed);
-  LOGF("  Length: %d\n", message.length);
+  cmd.seq = (static_cast<uint16_t>(buffer[0]) << 8) | buffer[1];
+  cmd.flags = buffer[2];
+  cmd.effect = buffer[3];
+  cmd.groups = (static_cast<uint16_t>(buffer[4]) << 8) | buffer[5];
+  cmd.duration = (static_cast<uint16_t>(buffer[6]) << 8) | buffer[7];
+  cmd.length = buffer[8];
+  cmd.rainbow = buffer[9];
+  cmd.r = buffer[10];
+  cmd.g = buffer[11];
+  cmd.b = buffer[12];
+  cmd.speed = (static_cast<uint16_t>(buffer[13]) << 8) | buffer[14];
+  cmd.intensity = buffer[15];
 
-  return message;
+  LOGF("CMD seq=%u fx=0x%02X grp=0x%04X dur=%u rgb=%u,%u,%u spd=%u int=%u\n",
+       cmd.seq, cmd.effect, cmd.groups, cmd.duration,
+       cmd.r, cmd.g, cmd.b, cmd.speed, cmd.intensity);
+
+  return cmd;
 }
 
-bool IsLedEffect(Command command)
+bool MatchesGroup(const Command &cmd, uint16_t myGroups)
 {
-  return (command.effect >= 20 && command.effect <= 49) || command.effect == 100 ||
-         (command.effect >= 103 && command.effect <= 109);
+  return (cmd.groups & myGroups) != 0;
 }

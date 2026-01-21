@@ -497,11 +497,9 @@
                songs: [],
                nanos: {},
                activeLabel: localStorage.getItem('selectedLabel') || 'Alle',
-               tickHistory: [],
                lastTickTime: null,
                cursorAnimationFrame: null,
                currentTick: null,
-               ticksPerSecond: null,
                lastMidiEvent: null,
                currentSongDetails: null,
                lastActivePart: null,
@@ -579,31 +577,20 @@
                if (data.type === 'tick') {
                   const now = performance.now()
 
-                  // Reset history if there's a big jump in ticks
-                  if (this.currentTick !== null) {
-                     const expectedNextTick = this.currentTick + (this.ticksPerSecond || 0)
-                     const jumpDetected = Math.abs(data.tick - expectedNextTick) > 10
+                  // Sprung-Erkennung: Wenn der neue Tick mehr als 200 Ticks vom erwarteten entfernt ist
+                  if (this.currentTick !== null && this.lastTickTime !== null) {
+                     const timeSinceLastTick = (now - this.lastTickTime) / 1000
+                     const currentTempo = this.getCurrentTempo(this.currentTick)
+                     const expectedTicksPerSecond = (currentTempo * 96) / 60
+                     const expectedTick = this.currentTick + (timeSinceLastTick * expectedTicksPerSecond)
+                     const tickDifference = Math.abs(data.tick - expectedTick)
 
-                     if (jumpDetected) {
-                        this.tickHistory = []
-                        this.ticksPerSecond = null
+                     // Bei grossem Unterschied: Sofort zum neuen Tick springen ohne Interpolation
+                     if (tickDifference > 200) {
+                        this.currentTick = data.tick
+                        this.lastTickTime = now
+                        return
                      }
-                  }
-
-                  this.tickHistory.push({ tick: data.tick, time: now })
-
-                  // Keep only last 3 ticks for rate calculation
-                  if (this.tickHistory.length > 3) {
-                     this.tickHistory.shift()
-                  }
-
-                  // Calculate ticks per second after we have at least 2 measurements
-                  if (this.tickHistory.length >= 2) {
-                     const newest = this.tickHistory[this.tickHistory.length - 1]
-                     const oldest = this.tickHistory[0]
-                     const timeDiff = (newest.time - oldest.time) / 1000 // Convert to seconds
-                     const tickDiff = newest.tick - oldest.tick
-                     this.ticksPerSecond = tickDiff / timeDiff
                   }
 
                   this.currentTick = data.tick
@@ -635,53 +622,20 @@
 
                      if (this.lastTickTime) {
                         const now = performance.now()
-                        const timeSinceLastTick = (now - this.lastTickTime) / 1000 // Convert to seconds
-                        let additionalTicks = 0
+                        const timeSinceLastTick = (now - this.lastTickTime) / 1000
 
-                        // Get starting tempo
-                        let currentTempo = this.getCurrentTempo(this.currentTick)
+                        // Begrenze die Interpolation auf maximal 500ms um Sprünge zu vermeiden
+                        const maxInterpolationTime = 0.5
+                        const clampedTime = Math.min(timeSinceLastTick, maxInterpolationTime)
 
-                        // Check for tempo changes between currentTick and estimated position
-                        if (this.currentSongDetails && this.currentSongDetails.tempoChanges) {
-                           const sortedChanges = [...this.currentSongDetails.tempoChanges]
-                              .sort((a, b) => a.tick - b.tick)
+                        // Verwende direkt das aktuelle Tempo für die Interpolation
+                        const currentTempo = this.getCurrentTempo(this.currentTick)
+                        const ticksPerSecond = (currentTempo * 96) / 60
 
-                           let remainingTime = timeSinceLastTick
-                           let lastProcessedTick = this.currentTick
+                        // Berechne zusätzliche Ticks basierend auf aktuellem Tempo
+                        const additionalTicks = clampedTime * ticksPerSecond
 
-                           for (const change of sortedChanges) {
-                              if (change.tick > this.currentTick) {
-                                 // Calculate ticks until tempo change
-                                 const ticksPerSecond = (currentTempo * 96) / 60
-                                 const timeToChange = (change.tick - lastProcessedTick) / ticksPerSecond
-
-                                 if (remainingTime >= timeToChange) {
-                                    // We reach this tempo change
-                                    additionalTicks += (change.tick - lastProcessedTick)
-                                    remainingTime -= timeToChange
-                                    currentTempo = change.tempo
-                                    lastProcessedTick = change.tick
-                                 } else {
-                                    // We don't reach this tempo change
-                                    additionalTicks += remainingTime * ticksPerSecond
-                                    remainingTime = 0
-                                    break
-                                 }
-                              }
-                           }
-
-                           // Process remaining time with final tempo
-                           if (remainingTime > 0) {
-                              const ticksPerSecond = (currentTempo * 96) / 60
-                              additionalTicks += remainingTime * ticksPerSecond
-                           }
-
-                           estimatedTick = this.currentTick + Math.round(additionalTicks)
-                        } else {
-                           // Fallback for no tempo changes
-                           const ticksPerSecond = (currentTempo * 96) / 60
-                           estimatedTick = this.currentTick + Math.round(timeSinceLastTick * ticksPerSecond)
-                        }
+                        estimatedTick = this.currentTick + Math.round(additionalTicks)
                      }
 
                      this.updateTimelineProgress(Math.round(estimatedTick))
@@ -845,8 +799,6 @@
                      // Add click handler for jumping to part
                      partElement.addEventListener('click', async () => {
                         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-                           this.tickHistory = []
-                           this.ticksPerSecond = null
                            this.lastTickTime = null
 
                            this.socket.send(JSON.stringify({
@@ -910,9 +862,6 @@
 
             async nextSong () {
                if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-                  // Only reset calculations, keep currentTick for display
-                  this.tickHistory = []
-                  this.ticksPerSecond = null
                   this.lastTickTime = null
 
                   this.socket.send(JSON.stringify({
@@ -933,8 +882,6 @@
                   this.loadingStatus.show = false
                   this.currentSongDetails = null
                   this.currentTick = null
-                  this.tickHistory = []
-                  this.ticksPerSecond = null
                   this.lastTickTime = null
                   this.showSidebar = true // Show sidebar when stopping song
 

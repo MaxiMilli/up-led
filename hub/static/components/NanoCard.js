@@ -20,20 +20,15 @@ export const NanoCard = {
          },
          showRegisterDialog: false,
          showLedDialog: false,
+         // Unified instrument groups (see PROTOCOL.md)
          registerMap: {
-            '2': 'Drums Person',
-            '4': 'Pauken Person',
-            '5': 'Lira',
-            '6': 'Chinellen',
-            '7': '1. Trompete',
-            '8': '2. Trompete',
-            '9': '1. Posaune',
-            '10': '2. Posaune',
-            '11': '3. Posaune',
-            '12': 'Bässe',
-            '13': 'Bässe Instrumente',
-            '14': 'Wägeli Instrumente',
-            '15': 'Pauken Instrumente'
+            '1': 'Drums',
+            '2': 'Pauken',
+            '3': 'Tschinellen',
+            '4': 'Liras',
+            '5': 'Trompeten',
+            '6': 'Posaunen',
+            '7': 'Bässe'
          }
       }
    },

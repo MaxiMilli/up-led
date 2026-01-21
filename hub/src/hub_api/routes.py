@@ -14,12 +14,65 @@ from src.hub_api.song_metadata import SongMetadataManager
 from src.show.player_instance import player as song_player
 from src.websocket.websocket_manager import websocket_manager
 from src.nano_network.nano_manager import NanoManager
+from src.nano_network.serial_gateway import SerialGateway, GROUP_BROADCAST
 from ..effects.effect_processor import effect_processor, EffectSettings
 
 router = APIRouter()
 command_manager = CommandManager()
 metadata_manager = SongMetadataManager()
 nano_manager = NanoManager()
+
+blackout_task = None
+
+
+async def send_blackout():
+	"""
+	Sends blackout command to all nanos
+	"""
+	# Sende Blackout direkt an alle Nanos (target_register=None = GROUP_BROADCAST)
+	# Command 0x14 = STATE_BLACKOUT
+	blackout_command = [
+		0x14,  # STATE_BLACKOUT
+		0, 0,  # duration
+		0,     # intensity
+		0, 0, 0,  # RGB
+		0,     # rainbow
+		0, 0,  # speed
+		0      # length
+	]
+	await nano_manager.broadcast_command(blackout_command, target_register=None)
+
+
+async def blackout_loop():
+	"""
+	Sends blackout every 3 seconds until cancelled
+	"""
+	try:
+		while True:
+			await send_blackout()
+			print("Blackout sent (song loaded, waiting for play)")
+			await asyncio.sleep(3)
+	except asyncio.CancelledError:
+		print("Blackout loop cancelled")
+
+
+def start_blackout_loop():
+	"""
+	Starts the blackout loop task
+	"""
+	global blackout_task
+	stop_blackout_loop()
+	blackout_task = asyncio.create_task(blackout_loop())
+
+
+def stop_blackout_loop():
+	"""
+	Stops the blackout loop task if running
+	"""
+	global blackout_task
+	if blackout_task and not blackout_task.done():
+		blackout_task.cancel()
+		blackout_task = None
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -37,6 +90,9 @@ async def websocket_endpoint(websocket: WebSocket):
         print(f"WebSocket error: {e}")
     finally:
         websocket_manager.disconnect(websocket)
+        if len(websocket_manager.active_connections) == 0:
+            stop_blackout_loop()
+            print("All WebSocket connections closed, blackout loop stopped")
 
 @router.post("/songs/import/{song_name}")
 async def import_song(song_name: str, file_content: str = Body(..., media_type="text/plain")):
@@ -261,6 +317,8 @@ async def load_song(song_name: str):
                 detail="Song loaded but data is not available"
             )
 
+        # Blackout-Loop wird jetzt im song_player.load_song() gestartet
+
         return {
             "status": "success",
             "message": "Song loaded and ready",
@@ -283,7 +341,8 @@ async def play_song():
         raise HTTPException(status_code=400, detail="A song is already playing")
 
     try:
-        # Start playback in background
+        stop_blackout_loop()
+
         asyncio.create_task(song_player.play(command_manager))
         
         return {
@@ -446,25 +505,24 @@ async def update_song_label(song_name: str, label: str = Body(...)):
 async def stop_song():
     """Stop the currently playing song"""
     try:
+        stop_blackout_loop()
+
         await song_player.stop()
-        
-        # Reset all state
+
         song_player.current_song = None
         song_player.is_playing = False
         
-        # Clear any pending commands
-        command_manager.clear_queue()
-        
-        # Send stop command to all nanos
-        settings = EffectSettings(
-            register=[1],  # Broadcast to all
-            rgb=[0, 0, 0],  # Turn off all LEDs
-            rainbow=0,
-            speed=0,
-            length=0,
-            intensity=0
-        )
-        await effect_processor.process_effect(effect_number=100, settings=settings)
+        # Send blackout command to all nanos (target_register=None = GROUP_BROADCAST)
+        blackout_command = [
+            0x14,  # STATE_BLACKOUT
+            0, 0,  # duration
+            0,     # intensity
+            0, 0, 0,  # RGB
+            0,     # rainbow
+            0, 0,  # speed
+            0      # length
+        ]
+        await nano_manager.broadcast_command(blackout_command, target_register=None)
         
         return {
             "status": "success",
@@ -476,36 +534,52 @@ async def stop_song():
 
 @router.post("/command")
 async def send_command(command: dict = Body(...)):
-    """Send a command directly to all connected nanos"""
+    """
+    Send a command directly to all connected nanos via serial gateway
+
+    Supports all effect codes (0x10-0x2F) and state commands
+    """
     try:
-        settings = EffectSettings(
-            register=command.get('register', [1]),  # Default to broadcast as a list
-            rgb=[
-                command.get('red', 0),
-                command.get('green', 0),
-                command.get('blue', 0)
-            ],
-            rainbow=command.get('rainbow', 0),
-            speed=command.get('speed', 0),
-            length=command.get('length', 0),
-            intensity=command.get('intensity', 255)
-        )
+        gateway = SerialGateway()
+
+        effect = command.get('effect', 0)
+        r = command.get('red', 0)
+        g = command.get('green', 0)
+        b = command.get('blue', 0)
+        intensity = command.get('intensity', 255)
+        speed = command.get('speed', 100)
+        length = command.get('length', 4)
+        rainbow = command.get('rainbow', 0)
 
         start_time = datetime.now()
-        await effect_processor.process_effect(
-            effect_number=command.get('effect', 0),
-            settings=settings
+
+        success = gateway.send_command(
+            effect=effect,
+            groups=GROUP_BROADCAST,
+            r=r,
+            g=g,
+            b=b,
+            intensity=intensity,
+            speed=speed,
+            length=length,
+            rainbow=rainbow
         )
+
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
-        print(f"Effect processing time: {duration:.6f} seconds")
+        print(f"Command processing time: {duration:.6f} seconds")
+
+        if not success:
+            raise HTTPException(status_code=503, detail="Failed to send command via serial")
 
         return {
             "status": "success",
-            "message": "Command processed through effect system",
+            "message": f"Command 0x{effect:02X} sent via serial gateway",
             "command": command
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error sending command: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
