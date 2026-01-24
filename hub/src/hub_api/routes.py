@@ -22,15 +22,10 @@ command_manager = CommandManager()
 metadata_manager = SongMetadataManager()
 nano_manager = NanoManager()
 
-blackout_task = None
-
-
 async def send_blackout():
 	"""
 	Sends blackout command to all nanos
 	"""
-	# Sende Blackout direkt an alle Nanos (target_register=None = GROUP_BROADCAST)
-	# Command 0x14 = STATE_BLACKOUT
 	blackout_command = [
 		0x14,  # STATE_BLACKOUT
 		0, 0,  # duration
@@ -42,37 +37,6 @@ async def send_blackout():
 	]
 	await nano_manager.broadcast_command(blackout_command, target_register=None)
 
-
-async def blackout_loop():
-	"""
-	Sends blackout every 3 seconds until cancelled
-	"""
-	try:
-		while True:
-			await send_blackout()
-			print("Blackout sent (song loaded, waiting for play)")
-			await asyncio.sleep(3)
-	except asyncio.CancelledError:
-		print("Blackout loop cancelled")
-
-
-def start_blackout_loop():
-	"""
-	Starts the blackout loop task
-	"""
-	global blackout_task
-	stop_blackout_loop()
-	blackout_task = asyncio.create_task(blackout_loop())
-
-
-def stop_blackout_loop():
-	"""
-	Stops the blackout loop task if running
-	"""
-	global blackout_task
-	if blackout_task and not blackout_task.done():
-		blackout_task.cancel()
-		blackout_task = None
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -91,8 +55,7 @@ async def websocket_endpoint(websocket: WebSocket):
     finally:
         websocket_manager.disconnect(websocket)
         if len(websocket_manager.active_connections) == 0:
-            stop_blackout_loop()
-            print("All WebSocket connections closed, blackout loop stopped")
+            print("All WebSocket connections closed")
 
 @router.post("/songs/import/{song_name}")
 async def import_song(song_name: str, file_content: str = Body(..., media_type="text/plain")):
@@ -341,8 +304,6 @@ async def play_song():
         raise HTTPException(status_code=400, detail="A song is already playing")
 
     try:
-        stop_blackout_loop()
-
         asyncio.create_task(song_player.play(command_manager))
         
         return {
@@ -505,8 +466,6 @@ async def update_song_label(song_name: str, label: str = Body(...)):
 async def stop_song():
     """Stop the currently playing song"""
     try:
-        stop_blackout_loop()
-
         await song_player.stop()
 
         song_player.current_song = None
@@ -537,7 +496,7 @@ async def send_command(command: dict = Body(...)):
     """
     Send a command directly to all connected nanos via serial gateway
 
-    Supports all effect codes (0x10-0x2F) and state commands
+    Supports all effect codes (0x10-0x3A) and state commands
     """
     try:
         gateway = SerialGateway()

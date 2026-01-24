@@ -112,7 +112,7 @@ bool sendCommand(uint8_t effect, uint16_t groups, uint8_t r, uint8_t g, uint8_t 
  */
 void sendStrobe(uint16_t groups)
 {
-    if (sendCommand(Cmd::kEffectStrobe, groups,
+    if (sendCommand(Cmd::kEffectBlink, groups,
                     kStrobeR, kStrobeG, kStrobeB,
                     kStrobeSpeed, kStrobeIntensity,
                     Flag::kPriority))

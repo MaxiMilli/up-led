@@ -3,7 +3,8 @@
     "allow": [
       "Bash(pio run:*)",
       "Bash(find:*)",
-      "Bash(~/.platformio/penv/bin/pio run:*)"
+      "Bash(~/.platformio/penv/bin/pio run:*)",
+      "Bash(grep:*)"
     ]
   }
 }

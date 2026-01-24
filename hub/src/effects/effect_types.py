@@ -8,27 +8,34 @@ class EffectType(Enum):
 	"""
 	SOLID = 0x20
 	BLINK = 0x21
-	FADE = 0x22
 	RAINBOW = 0x23
 	RAINBOW_CYCLE = 0x24
 	CHASE = 0x25
 	THEATER_CHASE = 0x26
 	TWINKLE = 0x27
-	SPARKLE = 0x28
 	FIRE = 0x29
 	PULSE = 0x2A
-	STROBE = 0x2B
 	GRADIENT = 0x2C
 	WAVE = 0x2D
 	METEOR = 0x2E
-	BREATHING = 0x2F
+	DNA = 0x30
+	BOUNCE = 0x31
+	COLOR_WIPE = 0x32
+	SCANNER = 0x33
+	CONFETTI = 0x34
+	LIGHTNING = 0x35
+	POLICE = 0x36
+	STACKING = 0x37
+	MARQUEE = 0x38
+	RIPPLE = 0x39
+	PLASMA = 0x3A
 
 	@classmethod
 	def from_id(cls, effect_id: int) -> 'EffectType':
 		"""
 		Get EffectType from effect ID.
 
-		@param {int} effect_id - Effect ID (0x20-0x2F)
+		@param {int} effect_id - Effect ID
 		@returns {EffectType} Effect type
 		@raises {ValueError} If effect ID is unknown
 		"""
@@ -46,8 +53,6 @@ class EffectType(Enum):
 		@param {int} note - MIDI note number
 		@returns {EffectType} Effect type for the note
 		"""
-		# Default mapping: notes 30-45 and 100-110 map to SOLID
-		# This can be extended for more complex mappings
 		if 30 <= note <= 45 or 100 <= note <= 110:
 			return cls.SOLID
 		else:
@@ -61,23 +66,30 @@ class EffectType(Enum):
 		@param {int} effect_id - Effect ID to check
 		@returns {bool} True if valid effect ID
 		"""
-		return 0x20 <= effect_id <= 0x2F
+		return 0x20 <= effect_id <= 0x3A
 
 
 # Effect ID constants for direct import
 EFFECT_SOLID = 0x20
 EFFECT_BLINK = 0x21
-EFFECT_FADE = 0x22
 EFFECT_RAINBOW = 0x23
 EFFECT_RAINBOW_CYCLE = 0x24
 EFFECT_CHASE = 0x25
 EFFECT_THEATER_CHASE = 0x26
 EFFECT_TWINKLE = 0x27
-EFFECT_SPARKLE = 0x28
 EFFECT_FIRE = 0x29
 EFFECT_PULSE = 0x2A
-EFFECT_STROBE = 0x2B
 EFFECT_GRADIENT = 0x2C
 EFFECT_WAVE = 0x2D
 EFFECT_METEOR = 0x2E
-EFFECT_BREATHING = 0x2F
+EFFECT_DNA = 0x30
+EFFECT_BOUNCE = 0x31
+EFFECT_COLOR_WIPE = 0x32
+EFFECT_SCANNER = 0x33
+EFFECT_CONFETTI = 0x34
+EFFECT_LIGHTNING = 0x35
+EFFECT_POLICE = 0x36
+EFFECT_STACKING = 0x37
+EFFECT_MARQUEE = 0x38
+EFFECT_RIPPLE = 0x39
+EFFECT_PLASMA = 0x3A

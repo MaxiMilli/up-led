@@ -11,7 +11,7 @@ constexpr uint8_t kSerialStartByte = 0xAA;
 
 constexpr uint8_t kWifiChannel = 11;
 constexpr uint32_t kHeartbeatInterval = 5000;
-constexpr uint32_t kHeartbeatTimeout = 15000;
+constexpr uint32_t kHeartbeatTimeout = 600000;      // 10 minutes
 constexpr uint32_t kActiveTimeout = 60000;
 
 constexpr uint32_t kButtonLongPressMs = 500;
@@ -123,20 +123,27 @@ namespace Cmd
 
    constexpr uint8_t kEffectSolid = 0x20;
    constexpr uint8_t kEffectBlink = 0x21;
-   constexpr uint8_t kEffectFade = 0x22;
    constexpr uint8_t kEffectRainbow = 0x23;
    constexpr uint8_t kEffectRainbowCycle = 0x24;
    constexpr uint8_t kEffectChase = 0x25;
    constexpr uint8_t kEffectTheaterChase = 0x26;
    constexpr uint8_t kEffectTwinkle = 0x27;
-   constexpr uint8_t kEffectSparkle = 0x28;
    constexpr uint8_t kEffectFire = 0x29;
    constexpr uint8_t kEffectPulse = 0x2A;
-   constexpr uint8_t kEffectStrobe = 0x2B;
    constexpr uint8_t kEffectGradient = 0x2C;
    constexpr uint8_t kEffectWave = 0x2D;
    constexpr uint8_t kEffectMeteor = 0x2E;
-   constexpr uint8_t kEffectBreathing = 0x2F;
+   constexpr uint8_t kEffectDna = 0x30;
+   constexpr uint8_t kEffectBounce = 0x31;
+   constexpr uint8_t kEffectColorWipe = 0x32;
+   constexpr uint8_t kEffectScanner = 0x33;
+   constexpr uint8_t kEffectConfetti = 0x34;
+   constexpr uint8_t kEffectLightning = 0x35;
+   constexpr uint8_t kEffectPolice = 0x36;
+   constexpr uint8_t kEffectStacking = 0x37;
+   constexpr uint8_t kEffectMarquee = 0x38;
+   constexpr uint8_t kEffectRipple = 0x39;
+   constexpr uint8_t kEffectPlasma = 0x3A;
 
    constexpr uint8_t kPairingRequest = 0xA0;
    constexpr uint8_t kPairingAckRecv = 0x81;

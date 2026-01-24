@@ -6,7 +6,6 @@ from ..nano_network.serial_gateway import (
 	GROUP_BROADCAST,
 	COMMAND_SOLID,
 	COMMAND_BLINK,
-	COMMAND_STROBE,
 	COMMAND_STATE_STANDBY,
 )
 

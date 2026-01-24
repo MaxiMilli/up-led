@@ -315,21 +315,18 @@ void HandleStandbyState(State &currentState)
 
 void HandleActiveState(State &currentState)
 {
-	constexpr uint32_t kDefaultEffectDuration = 2000;
+	// Effekt läuft unbegrenzt bis neuer Befehl kommt
+	// Bei Heartbeat-Timeout zurück zu Standby
+	if (lastHeartbeatTime > 0 && millis() - lastHeartbeatTime > kHeartbeatTimeout)
+	{
+		LOG("Heartbeat timeout in Active - back to Standby");
+		effectActive = false;
+		currentState = kStandby;
+		return;
+	}
 
 	if (effectActive)
 	{
-		uint32_t effectDuration = currentEffectCmd.duration > 0
-			? currentEffectCmd.duration
-			: kDefaultEffectDuration;
-
-		if (millis() - effectStartTime >= effectDuration)
-		{
-			effectActive = false;
-			currentState = kStandby;
-			return;
-		}
-
 		UpdateLedEffect();
 	}
 	else

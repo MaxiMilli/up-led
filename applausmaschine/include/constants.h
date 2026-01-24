@@ -62,7 +62,7 @@ namespace Instrument
 namespace Cmd
 {
     constexpr uint8_t kStateBlackout = 0x14;
-    constexpr uint8_t kEffectStrobe = 0x2B;
+    constexpr uint8_t kEffectBlink = 0x21;
     constexpr uint8_t kEffectSolid = 0x20;
 }
 

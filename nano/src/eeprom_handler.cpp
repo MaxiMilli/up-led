@@ -81,6 +81,12 @@ bool IsDeviceConfigured()
 
 bool SavePairingConfig(uint8_t deviceRegister, uint16_t ledCount, uint8_t standbyR, uint8_t standbyG, uint8_t standbyB)
 {
+	if (ledCount == 0 || ledCount > 300)
+	{
+		LOGF("Invalid ledCount: %u, clamping to valid range\n", ledCount);
+		ledCount = constrain(ledCount, 1, 300);
+	}
+
 	if (!preferences.begin(kNvsNamespace, false))
 	{
 		LOG("Failed to open NVS for writing");

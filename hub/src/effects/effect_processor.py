@@ -7,19 +7,19 @@ from .effect_types import EffectType
 
 EFFECT_NOTE_TO_COMMAND = {
 	30: 0x25,  # Running Light -> CHASE
-	31: 0x28,  # Glitter -> SPARKLE
+	31: 0x27,  # Glitter -> TWINKLE
 	32: 0x2D,  # Wave -> WAVE
 	33: 0x2A,  # Pulsate -> PULSE
-	34: 0x22,  # Fade -> FADE
-	35: 0x2B,  # Strobo -> STROBE
+	34: 0x2A,  # Fade -> PULSE
+	35: 0x21,  # Strobo -> BLINK
 	36: 0x27,  # Twinkle -> TWINKLE
-	37: 0x2F,  # Heartbeat -> BREATHING
+	37: 0x2A,  # Heartbeat -> PULSE
 	38: 0x2E,  # Meteor -> METEOR
 	39: 0x29,  # Flicker -> FIRE
 	40: 0x2E,  # Comet -> METEOR
 	41: 0x2D,  # Doppler -> WAVE
-	42: 0x28,  # Firework -> SPARKLE
-	43: 0x26,  # DNA Helix -> THEATER_CHASE
+	42: 0x27,  # Firework -> TWINKLE
+	43: 0x30,  # DNA Helix -> DNA
 	44: 0x2C,  # Gradient -> GRADIENT
 	45: 0x24,  # Rainbow Cycle -> RAINBOW_CYCLE
 
@@ -45,6 +45,7 @@ class EffectSettings:
 	speed: int = 0
 	length: int = 0
 	intensity: int = 255
+	duration: int = 0  # Dauer in ms
 
 	def __post_init__(self):
 		if self.rgb is None:
@@ -96,7 +97,8 @@ class EffectProcessor:
 			rgb=settings.rgb,
 			rainbow=bool(settings.rainbow),
 			effect_number=effect_number,
-			speed_ms=settings.speed or 100
+			speed_ms=settings.speed or 100,
+			duration_ms=settings.duration
 		)
 
 	async def _create_normal_effect(self, config: ColorEffectConfig) -> None:
@@ -106,11 +108,12 @@ class EffectProcessor:
 		@param {ColorEffectConfig} config - Effect configuration
 		"""
 		command_code = EFFECT_NOTE_TO_COMMAND.get(config.effect_number, config.effect_number)
-		print(f"Debug: Creating effect - Note {config.effect_number} -> Command 0x{command_code:02X}")
+		print(f"Debug: Creating effect - Note {config.effect_number} -> Command 0x{command_code:02X} for registers {config.target_registers}")
 
 		command = [
 			command_code,
-			0, 0,
+			(config.duration_ms >> 8) & 0xFF,  # Duration high byte
+			config.duration_ms & 0xFF,          # Duration low byte
 			config.intensity,
 			config.rgb[0],
 			config.rgb[1],
@@ -121,9 +124,9 @@ class EffectProcessor:
 			config.length
 		]
 
+		# Send all registers in ONE command (combined bitmask)
 		if config.target_registers:
-			for register in config.target_registers:
-				await self.nano_manager.broadcast_command(command, target_register=register)
+			await self.nano_manager.broadcast_command(command, target_registers=config.target_registers)
 		else:
 			await self.nano_manager.broadcast_command(command)
 

@@ -244,7 +244,7 @@
                intensity: 255,
                speed: 100,
                length: 4,
-               // LED-Effekte (0x20-0x2F)
+               // LED-Effekte (0x20-0x3A)
                effects: [
                   {
                      id: 0x20,
@@ -255,14 +255,7 @@
                   {
                      id: 0x21,
                      name: 'Blink',
-                     description: 'Blinken',
-                     hasIntensity: true,
-                     hasSpeed: true
-                  },
-                  {
-                     id: 0x22,
-                     name: 'Fade',
-                     description: 'Ein-/Ausfaden',
+                     description: 'Blinken / Stroboskop',
                      hasIntensity: true,
                      hasSpeed: true
                   },
@@ -283,7 +276,7 @@
                   {
                      id: 0x25,
                      name: 'Chase',
-                     description: 'Lauflicht',
+                     description: 'Lauflicht (eine Richtung)',
                      hasIntensity: true,
                      hasSpeed: true,
                      hasLength: true
@@ -298,16 +291,10 @@
                   {
                      id: 0x27,
                      name: 'Twinkle',
-                     description: 'Funkeln',
+                     description: 'Funkeln / Glitzern',
                      hasIntensity: true,
-                     hasSpeed: true
-                  },
-                  {
-                     id: 0x28,
-                     name: 'Sparkle',
-                     description: 'Glitzern',
-                     hasIntensity: true,
-                     hasSpeed: true
+                     hasSpeed: true,
+                     hasLength: true
                   },
                   {
                      id: 0x29,
@@ -319,16 +306,10 @@
                   {
                      id: 0x2A,
                      name: 'Pulse',
-                     description: 'Pulsieren',
+                     description: 'Pulsieren / Atmen',
                      hasIntensity: true,
-                     hasSpeed: true
-                  },
-                  {
-                     id: 0x2B,
-                     name: 'Strobe',
-                     description: 'Stroboskop',
-                     hasIntensity: true,
-                     hasSpeed: true
+                     hasSpeed: true,
+                     hasLength: true
                   },
                   {
                      id: 0x2C,
@@ -348,15 +329,91 @@
                   {
                      id: 0x2E,
                      name: 'Meteor',
-                     description: 'Meteor/Sternschnuppe',
+                     description: 'Meteor mit Schweif',
                      hasIntensity: true,
                      hasSpeed: true,
                      hasLength: true
                   },
                   {
-                     id: 0x2F,
-                     name: 'Breathing',
-                     description: 'Atmen (langsames Pulsieren)',
+                     id: 0x30,
+                     name: 'DNA',
+                     description: 'DNA-Helix (Farbe ↔ Weiss)',
+                     hasIntensity: true,
+                     hasSpeed: true,
+                     hasLength: true
+                  },
+                  {
+                     id: 0x31,
+                     name: 'Bounce',
+                     description: 'Hin-und-her-Segment',
+                     hasIntensity: true,
+                     hasSpeed: true,
+                     hasLength: true
+                  },
+                  {
+                     id: 0x32,
+                     name: 'Color Wipe',
+                     description: 'Progressiv fuellen/leeren',
+                     hasIntensity: true,
+                     hasSpeed: true
+                  },
+                  {
+                     id: 0x33,
+                     name: 'Scanner',
+                     description: 'KITT-Scanner mit Fade-Trail',
+                     hasIntensity: true,
+                     hasSpeed: true,
+                     hasLength: true
+                  },
+                  {
+                     id: 0x34,
+                     name: 'Confetti',
+                     description: 'Bunte zufaellige Punkte',
+                     hasIntensity: true,
+                     hasSpeed: true
+                  },
+                  {
+                     id: 0x35,
+                     name: 'Lightning',
+                     description: 'Zufaellige Blitze',
+                     hasIntensity: true,
+                     hasSpeed: true,
+                     hasLength: true
+                  },
+                  {
+                     id: 0x36,
+                     name: 'Police',
+                     description: 'Polizei-Blinklicht',
+                     hasIntensity: true,
+                     hasSpeed: true
+                  },
+                  {
+                     id: 0x37,
+                     name: 'Stacking',
+                     description: 'LEDs stapeln sich auf',
+                     hasIntensity: true,
+                     hasSpeed: true
+                  },
+                  {
+                     id: 0x38,
+                     name: 'Marquee',
+                     description: 'Laufschrift-Muster',
+                     hasIntensity: true,
+                     hasSpeed: true,
+                     hasLength: true
+                  },
+                  {
+                     id: 0x39,
+                     name: 'Ripple',
+                     description: 'Welle von Mitte nach aussen',
+                     hasIntensity: true,
+                     hasSpeed: true,
+                     hasLength: true
+                  },
+                  {
+                     id: 0x3A,
+                     name: 'Plasma',
+                     description: 'Organisches Farbspiel',
                      hasIntensity: true,
                      hasSpeed: true
                   }

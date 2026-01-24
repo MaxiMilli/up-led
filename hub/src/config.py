@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     SERIAL_BAUD: int = 115200
     HEARTBEAT_INTERVAL_MS: int = 5000
 
+    WIFI_SSID: str = "uzepatscher_lichtshow"
+    WIFI_PASSWORD: str = "kWalkingLight"
+
     model_config = {
         "env_file": ".env.test" if "TESTING" in os.environ else ".env",
         "extra": "ignore"

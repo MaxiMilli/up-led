@@ -6,7 +6,7 @@ Includes pairing workflow for individual nano configuration.
 """
 
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from dataclasses import asdict
 import asyncio
 import json
@@ -19,7 +19,7 @@ from .serial_gateway import (
 	register_to_group_bitmask,
 	GROUP_BROADCAST,
 	GROUP_ALL,
-	COMMAND_STROBE,
+	COMMAND_BLINK,
 	COMMAND_STATE_STANDBY,
 	COMMAND_SET_LED_COUNT,
 	COMMAND_SOLID,
@@ -263,7 +263,7 @@ class NanoManager:
 
 				groups = register_to_group_bitmask(info.register)
 				self.gateway.send_command(
-					effect=COMMAND_STROBE,
+					effect=COMMAND_BLINK,
 					groups=groups,
 					duration=1000,
 					r=255,
@@ -336,6 +336,7 @@ class NanoManager:
 		self,
 		command,
 		target_register: Optional[int] = None,
+		target_registers: Optional[List[int]] = None,
 		target_mac: Optional[str] = None,
 		**kwargs
 	) -> bool:
@@ -356,16 +357,18 @@ class NanoManager:
 
 		@param {bytes | list | int} command - Command bytes/list or effect ID
 		@param {int} target_register - Target register (1=all, 2-15=specific groups)
+		@param {List[int]} target_registers - List of registers (combined into single bitmask)
 		@param {str} target_mac - Ignored (kept for backwards compatibility)
 		@param {dict} kwargs - Additional parameters for new format
 		@returns {bool} True if sent successfully
 		"""
 		if isinstance(command, (bytes, list)):
-			return self._broadcast_legacy_command(command, target_register, target_mac)
+			return self._broadcast_legacy_command(command, target_register, target_registers, target_mac)
 
 		return self._broadcast_new_command(
 			effect=command,
 			target_register=target_register,
+			target_registers=target_registers,
 			**kwargs
 		)
 
@@ -373,13 +376,15 @@ class NanoManager:
 		self,
 		command,
 		target_register: Optional[int] = None,
+		target_registers: Optional[List[int]] = None,
 		target_mac: Optional[str] = None
 	) -> bool:
 		"""
 		Broadcast a legacy 11-byte command.
 
 		@param {bytes | list} command - Legacy 11-byte command
-		@param {int} target_register - Target register
+		@param {int} target_register - Target register (single)
+		@param {List[int]} target_registers - List of registers (combined into bitmask)
 		@param {str} target_mac - MAC address (used to look up register)
 		@returns {bool} True if sent successfully
 		"""
@@ -405,7 +410,12 @@ class NanoManager:
 		speed = (command[8] << 8) | command[9]
 		length = command[10]
 
-		if target_register is not None:
+		# Combine multiple registers into one bitmask
+		if target_registers is not None and len(target_registers) > 0:
+			groups = 0
+			for reg in target_registers:
+				groups |= register_to_group_bitmask(reg)
+		elif target_register is not None:
 			groups = register_to_group_bitmask(target_register)
 		else:
 			groups = GROUP_BROADCAST
@@ -427,6 +437,7 @@ class NanoManager:
 		self,
 		effect: int,
 		target_register: Optional[int] = None,
+		target_registers: Optional[List[int]] = None,
 		duration: int = 0,
 		intensity: int = 255,
 		red: int = 0,
@@ -442,6 +453,7 @@ class NanoManager:
 
 		@param {int} effect - Effect/command ID
 		@param {int} target_register - Target register (1=all, 2-15=specific groups)
+		@param {List[int]} target_registers - List of registers (combined into bitmask)
 		@param {int} duration - Effect duration in ms
 		@param {int} intensity - Brightness (0-255)
 		@param {int} red - Red value (0-255)
@@ -453,7 +465,12 @@ class NanoManager:
 		@param {int} flags - Command flags
 		@returns {bool} True if sent successfully
 		"""
-		if target_register is not None:
+		# Combine multiple registers into one bitmask
+		if target_registers is not None and len(target_registers) > 0:
+			groups = 0
+			for reg in target_registers:
+				groups |= register_to_group_bitmask(reg)
+		elif target_register is not None:
 			groups = register_to_group_bitmask(target_register)
 		else:
 			groups = GROUP_BROADCAST

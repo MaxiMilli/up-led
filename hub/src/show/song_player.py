@@ -102,7 +102,6 @@ class SongPlayer:
         # Task-Referenzen für Playback und Broadcast
         self._playback_task: Optional[asyncio.Task] = None
         self._broadcast_task: Optional[asyncio.Task] = None
-        self._blackout_task: Optional[asyncio.Task] = None
 
         self._is_holding = False
 
@@ -203,8 +202,18 @@ class SongPlayer:
                 cmd = bytes([0x64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                 await self.nano_manager.broadcast_command(cmd)
 
-                # Starte Blackout-Loop (sendet jede Sekunde Blackout bis Song startet)
-                await self._start_blackout_loop()
+                # Sende einmalig Blackout an alle Nanos
+                blackout_command = [
+                    0x14,  # STATE_BLACKOUT
+                    0, 0,  # duration
+                    0,     # intensity
+                    0, 0, 0,  # RGB
+                    0,     # rainbow
+                    0, 0,  # speed
+                    0      # length
+                ]
+                await self.nano_manager.broadcast_command(blackout_command, target_register=None)
+                logger.info("[load_song] Blackout gesendet")
 
                 return True
 
@@ -271,9 +280,6 @@ class SongPlayer:
                 start_tick = 0
             
             logger.info(f"[play] Starte Song Playback ab Tick {start_tick}.")
-
-            # Stoppe Blackout-Loop
-            await self._stop_blackout_loop()
 
             self.is_playing = True
             self.current_tick = start_tick
@@ -421,9 +427,6 @@ class SongPlayer:
                 self._playback_task.cancel()
             if self._broadcast_task:
                 self._broadcast_task.cancel()
-
-            # Auch Blackout-Loop stoppen falls noch aktiv
-            await self._stop_blackout_loop()
 
             await self._on_playback_end()
 
@@ -591,8 +594,10 @@ class SongPlayer:
             if 1 <= nt <= 15:
                 unified = midi_note_to_group(nt)
                 if unified == 0:
-                    # kAll - use special handling or register 1
-                    registers.append(1)
+                    # kAll (Ganze Gugge) - alle Register 1-7 hinzufügen
+                    for reg in range(1, 8):
+                        if reg not in registers:
+                            registers.append(reg)
                 else:
                     # Only add if not already in list (avoid duplicates from merged notes)
                     if unified not in registers:
@@ -622,23 +627,34 @@ class SongPlayer:
                 self.channel_0_active = True
         
         # Falls wir Register gesammelt haben, übergeben wir sie in settings
+        # Wenn keine Register, verwende Default [1] (alle)
         if registers:
+            settings.register = registers
+        else:
+            registers = [1]  # Default: alle
             settings.register = registers
 
         # 2) Nun die Effekte auslösen
         #    z.B. bei Noten 30–56 oder 100–107 (wie im Original)
         for event in note_on_events:
             if (30 <= event.note <= 56) or (100 <= event.note <= 107):
-                # Debug
-                logger.info(f"[Tick {self.current_tick}] -> Effektnote {event.note}, Vel={event.velocity} | Settings={settings}")
+                # Alle Register in EINEM Paket senden (kombinierte Bitmask)
+                effect_settings = EffectSettings(
+                    register=registers,  # Alle Register auf einmal
+                    rgb=settings.rgb.copy(),
+                    rainbow=settings.rainbow,
+                    speed=settings.speed,
+                    length=settings.length,
+                    intensity=settings.intensity
+                )
 
-                # Effekt anstoßen (asynchron) 
-                await asyncio.create_task(effect_processor.process_effect(event.note, settings))
-                # Optional: Warte auf das Ergebnis 
-                # await effect_processor.process_effect(event.note, settings)
+                logger.info(f"[Tick {self.current_tick}] -> Effekt {event.note} für Register {registers}")
 
-                # Optional: Broadcast an WebSocket
-                await asyncio.create_task(websocket_manager.broadcast_message({
+                # Effekt anstoßen (sendet ein Paket mit kombinierter Gruppen-Bitmask)
+                await effect_processor.process_effect(event.note, effect_settings)
+
+                # Broadcast an WebSocket (einmal für alle)
+                await websocket_manager.broadcast_message({
                     "type": "midi_event",
                     "settings": {
                         "effect": event.note,
@@ -649,52 +665,9 @@ class SongPlayer:
                         "intensity": settings.intensity,
                         "rainbow": settings.rainbow
                     }
-                }))
+                })
 
     async def hold(self):
         """Unterbricht das Abspielen temporär"""
         self._is_holding = True
         logger.info("[hold] Playback temporarily paused")
-
-    async def _start_blackout_loop(self):
-        """Startet die Blackout-Loop, die jede Sekunde Blackout an alle Nanos sendet."""
-        # Erst bestehenden Task stoppen falls vorhanden
-        await self._stop_blackout_loop()
-
-        logger.info("[blackout_loop] Starte Blackout-Loop (Song geladen, wartet auf Start)")
-        self._blackout_task = asyncio.create_task(self._blackout_loop())
-
-    async def _stop_blackout_loop(self):
-        """Stoppt die Blackout-Loop."""
-        if self._blackout_task:
-            self._blackout_task.cancel()
-            try:
-                await self._blackout_task
-            except asyncio.CancelledError:
-                pass
-            self._blackout_task = None
-            logger.info("[blackout_loop] Blackout-Loop gestoppt")
-
-    async def _blackout_loop(self):
-        """Sendet jede Sekunde Blackout an alle Nanos bis der Song startet."""
-        try:
-            while True:
-                # Sende Blackout direkt an alle Nanos (target_register=None = GROUP_BROADCAST)
-                # Command 0x14 = STATE_BLACKOUT
-                blackout_command = [
-                    0x14,  # STATE_BLACKOUT
-                    0, 0,  # duration
-                    0,     # intensity
-                    0, 0, 0,  # RGB
-                    0,     # rainbow
-                    0, 0,  # speed
-                    0      # length
-                ]
-                await self.nano_manager.broadcast_command(blackout_command, target_register=None)
-                logger.debug("[blackout_loop] Blackout gesendet an alle Nanos")
-
-                await asyncio.sleep(1.0)  # Jede Sekunde
-        except asyncio.CancelledError:
-            logger.info("[blackout_loop] Loop abgebrochen")
-        except Exception as e:
-            logger.error(f"[blackout_loop] Fehler: {e}")

@@ -35,8 +35,6 @@ namespace
 			return "Solid";
 		case Cmd::kEffectBlink:
 			return "Blink";
-		case Cmd::kEffectFade:
-			return "Fade";
 		case Cmd::kEffectRainbow:
 			return "Rainbow";
 		case Cmd::kEffectRainbowCycle:
@@ -47,22 +45,38 @@ namespace
 			return "Theater Chase";
 		case Cmd::kEffectTwinkle:
 			return "Twinkle";
-		case Cmd::kEffectSparkle:
-			return "Sparkle";
 		case Cmd::kEffectFire:
 			return "Fire";
 		case Cmd::kEffectPulse:
 			return "Pulse";
-		case Cmd::kEffectStrobe:
-			return "Strobe";
 		case Cmd::kEffectGradient:
 			return "Gradient";
 		case Cmd::kEffectWave:
 			return "Wave";
 		case Cmd::kEffectMeteor:
 			return "Meteor";
-		case Cmd::kEffectBreathing:
-			return "Breathing";
+		case Cmd::kEffectDna:
+			return "DNA Helix";
+		case Cmd::kEffectBounce:
+			return "Bounce";
+		case Cmd::kEffectColorWipe:
+			return "Color Wipe";
+		case Cmd::kEffectScanner:
+			return "Scanner";
+		case Cmd::kEffectConfetti:
+			return "Confetti";
+		case Cmd::kEffectLightning:
+			return "Lightning";
+		case Cmd::kEffectPolice:
+			return "Police";
+		case Cmd::kEffectStacking:
+			return "Stacking";
+		case Cmd::kEffectMarquee:
+			return "Marquee";
+		case Cmd::kEffectRipple:
+			return "Ripple";
+		case Cmd::kEffectPlasma:
+			return "Plasma";
 		default:
 			return "Unknown";
 		}
@@ -161,11 +175,8 @@ void SetLedEffect(const Command &cmd)
 	LOGF("Effect: %s | RGB(%u,%u,%u) | Brightness: %u%% | Speed: %u | Duration: %u | Length: %u | Rainbow: %u\n",
 		  GetEffectName(cmd.effect), cmd.r, cmd.g, cmd.b, (cmd.intensity * 100) / 255, cmd.speed, cmd.duration, cmd.length, cmd.rainbow);
 
-	if (cmd.effect != activeCmd.effect)
-	{
-		step = 0;
-		lastUpdate = millis();
-	}
+	step = 0;
+	lastUpdate = millis();
 
 	activeCmd = cmd;
 	identifyActive = false;
@@ -250,17 +261,6 @@ void UpdateLedEffect()
 		break;
 	}
 
-	case Cmd::kEffectFade:
-	{
-		float phase = (float)(step % 100) / 100.0f * 2.0f * PI;
-		float brightness = (sin(phase) + 1.0f) / 2.0f;
-		uint8_t intensity = brightness * activeCmd.intensity;
-		uint32_t color = strip->Color(activeCmd.r, activeCmd.g, activeCmd.b);
-		color = ApplyIntensity(color, intensity);
-		strip->fill(color, 0, numLeds);
-		strip->show();
-		break;
-	}
 
 	case Cmd::kEffectRainbow:
 	{
@@ -342,16 +342,6 @@ void UpdateLedEffect()
 		break;
 	}
 
-	case Cmd::kEffectSparkle:
-	{
-		strip->clear();
-		int sparklePos = random(numLeds);
-		uint32_t color = strip->Color(activeCmd.r, activeCmd.g, activeCmd.b);
-		color = ApplyIntensity(color, activeCmd.intensity);
-		strip->setPixelColor(sparklePos, color);
-		strip->show();
-		break;
-	}
 
 	case Cmd::kEffectFire:
 	{
@@ -380,21 +370,6 @@ void UpdateLedEffect()
 		break;
 	}
 
-	case Cmd::kEffectStrobe:
-	{
-		if ((step % 2) == 0)
-		{
-			uint32_t color = strip->Color(activeCmd.r, activeCmd.g, activeCmd.b);
-			color = ApplyIntensity(color, activeCmd.intensity);
-			strip->fill(color, 0, numLeds);
-		}
-		else
-		{
-			strip->clear();
-		}
-		strip->show();
-		break;
-	}
 
 	case Cmd::kEffectGradient:
 	{
@@ -479,14 +454,292 @@ void UpdateLedEffect()
 		break;
 	}
 
-	case Cmd::kEffectBreathing:
+
+	case Cmd::kEffectDna:
 	{
-		float phase = (float)(step % 100) / 100.0f * 2.0f * PI;
-		float brightness = (1.0f - cos(phase)) / 2.0f;
-		uint8_t intensity = brightness * activeCmd.intensity;
+		uint8_t waveLen = activeCmd.length > 0 ? activeCmd.length : 10;
+		for (uint16_t i = 0; i < numLeds; i++)
+		{
+			float phase = 2.0f * PI * ((float)i / waveLen + (float)step / 20.0f);
+			float mix = (sin(phase) + 1.0f) / 2.0f;
+
+			uint8_t r = activeCmd.r + (uint8_t)((255 - activeCmd.r) * (1.0f - mix));
+			uint8_t g = activeCmd.g + (uint8_t)((255 - activeCmd.g) * (1.0f - mix));
+			uint8_t b = activeCmd.b + (uint8_t)((255 - activeCmd.b) * (1.0f - mix));
+
+			uint32_t color = strip->Color(r, g, b);
+			color = ApplyIntensity(color, activeCmd.intensity);
+			strip->setPixelColor(i, color);
+		}
+		strip->show();
+		break;
+	}
+
+	case Cmd::kEffectBounce:
+	{
+		strip->clear();
+		uint8_t len = activeCmd.length > 0 ? activeCmd.length : 3;
 		uint32_t color = strip->Color(activeCmd.r, activeCmd.g, activeCmd.b);
-		color = ApplyIntensity(color, intensity);
-		strip->fill(color, 0, numLeds);
+		color = ApplyIntensity(color, activeCmd.intensity);
+
+		uint16_t maxPos = (numLeds > len) ? (numLeds - len) : 0;
+		uint16_t bouncePos = 0;
+		if (maxPos > 0)
+		{
+			uint16_t cycleLen = maxPos * 2;
+			uint16_t phase = step % cycleLen;
+			bouncePos = (phase <= maxPos) ? phase : cycleLen - phase;
+		}
+
+		for (uint8_t j = 0; j < len && (bouncePos + j) < numLeds; j++)
+		{
+			strip->setPixelColor(bouncePos + j, color);
+		}
+		strip->show();
+		break;
+	}
+
+	case Cmd::kEffectColorWipe:
+	{
+		if (numLeds == 0)
+			break;
+		uint32_t color = strip->Color(activeCmd.r, activeCmd.g, activeCmd.b);
+		color = ApplyIntensity(color, activeCmd.intensity);
+
+		uint16_t cycleLen = numLeds * 2;
+		uint16_t phase = step % cycleLen;
+
+		if (phase < numLeds)
+		{
+			strip->setPixelColor(phase, color);
+		}
+		else
+		{
+			strip->setPixelColor(phase - numLeds, 0);
+		}
+		strip->show();
+		break;
+	}
+
+	case Cmd::kEffectScanner:
+	{
+		if (numLeds < 2)
+			break;
+		strip->clear();
+		uint8_t trailLen = activeCmd.length > 0 ? activeCmd.length : 5;
+		uint32_t color = strip->Color(activeCmd.r, activeCmd.g, activeCmd.b);
+
+		uint16_t maxPos = numLeds - 1;
+		uint16_t pos = 0;
+		if (maxPos > 0)
+		{
+			uint16_t cycleLen = maxPos * 2;
+			uint16_t phase = step % cycleLen;
+			pos = (phase <= maxPos) ? phase : cycleLen - phase;
+		}
+
+		strip->setPixelColor(pos, ApplyIntensity(color, activeCmd.intensity));
+
+		for (uint8_t i = 1; i <= trailLen; i++)
+		{
+			float fade = pow(0.6f, (float)i);
+			uint8_t trailIntensity = activeCmd.intensity * fade;
+			uint32_t trailColor = ApplyIntensity(color, trailIntensity);
+
+			int leftPos = (int)pos - i;
+			int rightPos = (int)pos + i;
+			if (leftPos >= 0)
+				strip->setPixelColor(leftPos, trailColor);
+			if (rightPos < numLeds)
+				strip->setPixelColor(rightPos, trailColor);
+		}
+		strip->show();
+		break;
+	}
+
+	case Cmd::kEffectConfetti:
+	{
+		for (uint16_t i = 0; i < numLeds; i++)
+		{
+			uint32_t curColor = strip->getPixelColor(i);
+			uint8_t r = ((curColor >> 16) & 0xFF);
+			uint8_t g = ((curColor >> 8) & 0xFF);
+			uint8_t b = (curColor & 0xFF);
+			uint8_t fadeAmt = 10;
+			r = (r > fadeAmt) ? r - fadeAmt : 0;
+			g = (g > fadeAmt) ? g - fadeAmt : 0;
+			b = (b > fadeAmt) ? b - fadeAmt : 0;
+			strip->setPixelColor(i, strip->Color(r, g, b));
+		}
+
+		uint8_t numNew = 1 + random(2);
+		for (uint8_t n = 0; n < numNew; n++)
+		{
+			uint16_t pos = random(numLeds);
+			uint32_t randColor = WheelColor(random(256));
+			randColor = ApplyIntensity(randColor, activeCmd.intensity);
+			strip->setPixelColor(pos, randColor);
+		}
+		strip->show();
+		break;
+	}
+
+	case Cmd::kEffectLightning:
+	{
+		// Fade all pixels toward black
+		for (uint16_t i = 0; i < numLeds; i++)
+		{
+			uint32_t curColor = strip->getPixelColor(i);
+			uint8_t r = ((curColor >> 16) & 0xFF);
+			uint8_t g = ((curColor >> 8) & 0xFF);
+			uint8_t b = (curColor & 0xFF);
+			r = r > 40 ? r - 40 : 0;
+			g = g > 40 ? g - 40 : 0;
+			b = b > 40 ? b - 40 : 0;
+			strip->setPixelColor(i, strip->Color(r, g, b));
+		}
+
+		uint8_t chance = activeCmd.length > 0 ? activeCmd.length : 8;
+		if (random(100) < chance)
+		{
+			uint16_t flashPos = random(numLeds > 5 ? numLeds - 5 : 0);
+			uint8_t flashLen = 3 + random(5);
+			for (uint8_t i = 0; i < flashLen && (flashPos + i) < numLeds; i++)
+			{
+				uint32_t color = strip->Color(activeCmd.r, activeCmd.g, activeCmd.b);
+				color = ApplyIntensity(color, activeCmd.intensity);
+				strip->setPixelColor(flashPos + i, color);
+			}
+		}
+		strip->show();
+		break;
+	}
+
+	case Cmd::kEffectPolice:
+	{
+		uint16_t half = numLeds / 2;
+		bool phase = ((step / 3) % 2) == 0;
+
+		uint32_t colorA = strip->Color(activeCmd.r, activeCmd.g, activeCmd.b);
+		colorA = ApplyIntensity(colorA, activeCmd.intensity);
+		uint32_t colorB = ApplyIntensity(strip->Color(255, 255, 255), activeCmd.intensity);
+
+		for (uint16_t i = 0; i < numLeds; i++)
+		{
+			if (i < half)
+				strip->setPixelColor(i, phase ? colorA : 0);
+			else
+				strip->setPixelColor(i, phase ? 0 : colorB);
+		}
+		strip->show();
+		break;
+	}
+
+	case Cmd::kEffectStacking:
+	{
+		static uint16_t stackHeight = 0;
+		static uint16_t dotPos = 0;
+
+		if (step == 1)
+		{
+			stackHeight = 0;
+			dotPos = 0;
+			strip->clear();
+		}
+
+		uint32_t color = strip->Color(activeCmd.r, activeCmd.g, activeCmd.b);
+		color = ApplyIntensity(color, activeCmd.intensity);
+
+		// Clear previous dot position
+		if (dotPos < numLeds)
+			strip->setPixelColor(dotPos, 0);
+
+		dotPos++;
+		uint16_t landingPos = numLeds - 1 - stackHeight;
+
+		if (dotPos >= landingPos)
+		{
+			strip->setPixelColor(landingPos, color);
+			stackHeight++;
+			dotPos = 0;
+
+			if (stackHeight >= numLeds)
+			{
+				stackHeight = 0;
+				strip->clear();
+			}
+		}
+		else
+		{
+			strip->setPixelColor(dotPos, color);
+		}
+		strip->show();
+		break;
+	}
+
+	case Cmd::kEffectMarquee:
+	{
+		uint8_t spacing = activeCmd.length > 0 ? activeCmd.length : 5;
+		uint32_t color = strip->Color(activeCmd.r, activeCmd.g, activeCmd.b);
+		color = ApplyIntensity(color, activeCmd.intensity);
+
+		for (uint16_t i = 0; i < numLeds; i++)
+		{
+			if ((i + step) % spacing == 0)
+				strip->setPixelColor(i, color);
+			else
+				strip->setPixelColor(i, 0);
+		}
+		strip->show();
+		break;
+	}
+
+	case Cmd::kEffectRipple:
+	{
+		strip->clear();
+		uint16_t center = numLeds / 2;
+		uint16_t maxRadius = center;
+		uint16_t radius = step % (maxRadius + 5); // +5 for gap between ripples
+
+		uint32_t color = strip->Color(activeCmd.r, activeCmd.g, activeCmd.b);
+
+		if (radius <= maxRadius)
+		{
+			uint8_t trailLen = activeCmd.length > 0 ? activeCmd.length : 3;
+			for (uint8_t t = 0; t < trailLen; t++)
+			{
+				int r = (int)radius - t;
+				if (r < 0) break;
+				float fade = pow(0.7f, (float)t);
+				uint8_t trailIntensity = activeCmd.intensity * fade;
+				uint32_t trailColor = ApplyIntensity(color, trailIntensity);
+
+				int posLeft = center - r;
+				int posRight = center + r;
+				if (posLeft >= 0 && posLeft < numLeds)
+					strip->setPixelColor(posLeft, trailColor);
+				if (posRight >= 0 && posRight < numLeds && posRight != posLeft)
+					strip->setPixelColor(posRight, trailColor);
+			}
+		}
+		strip->show();
+		break;
+	}
+
+	case Cmd::kEffectPlasma:
+	{
+		for (uint16_t i = 0; i < numLeds; i++)
+		{
+			float v1 = sin((float)i / 3.0f + (float)step / 7.0f);
+			float v2 = sin((float)i / 5.0f - (float)step / 11.0f);
+			float v3 = sin(((float)i + (float)step) / 9.0f);
+			float val = (v1 + v2 + v3 + 3.0f) / 6.0f; // 0.0 - 1.0
+
+			uint8_t hue = (uint8_t)(val * 255.0f);
+			uint32_t color = WheelColor(hue);
+			color = ApplyIntensity(color, activeCmd.intensity);
+			strip->setPixelColor(i, color);
+		}
 		strip->show();
 		break;
 	}
@@ -715,6 +968,12 @@ void ShowDimWhiteStandby()
 {
 	if (!initialized)
 		return;
+
+	static uint32_t lastDimUpdate = 0;
+	uint32_t now = millis();
+	if (now - lastDimUpdate < 100)
+		return;
+	lastDimUpdate = now;
 
 	strip->fill(strip->Color(5, 5, 5), 0, numLeds);
 	strip->show();

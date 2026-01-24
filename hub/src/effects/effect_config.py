@@ -17,6 +17,7 @@ class ColorEffectConfig(BaseEffectConfig):
 	rainbow: bool = False
 	effect_number: int = 0
 	speed_ms: int = 100
+	duration_ms: int = 0
 
 	def __post_init__(self):
 		self.rgb = self.rgb or [0, 0, 0]

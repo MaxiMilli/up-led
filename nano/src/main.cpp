@@ -22,8 +22,8 @@ void setup()
   InitializeLeds();
   InitializeButton();
 
-  // OTA check must happen BEFORE ESP-NOW init (uses WiFi in different mode)
-  CheckAndPerformOta();
+  // OTA deaktiviert - bei Bedarf manuell flashen
+  // CheckAndPerformOta();
 
   if (!InitializeEspNow())
   {
