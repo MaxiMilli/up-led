@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+   <meta charset="UTF-8">
+   <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+   >
+   <title>LAUNCHPAD</title>
+   <script src="static/tailwind.js"></script>
+   <link
+      href="static/flowbite.css"
+      rel="stylesheet"
+   />
+   <script src="static/vue.js"></script>
+   <style>
+      * {
+         -webkit-user-select: none;
+         -webkit-touch-callout: none;
+         user-select: none;
+      }
+      html, body {
+         position: fixed;
+         width: 100%;
+         height: 100%;
+         overflow: hidden;
+      }
+      .preset-btn {
+         transition: transform 0.1s, box-shadow 0.1s;
+      }
+      .preset-btn:active {
+         transform: scale(0.95);
+      }
+      .preset-btn.active {
+         box-shadow: 0 0 0 4px white, 0 0 0 6px #3b82f6;
+      }
+   </style>
+</head>
+
+<body class="bg-gray-900 h-screen">
+   <div
+      id="app"
+      class="h-full flex flex-col"
+      v-cloak
+   >
+      <!-- Top Bar -->
+      <nav class="bg-gray-800 border-b border-gray-700 px-4 py-2 flex justify-between items-center shrink-0">
+         <div class="flex items-center gap-4">
+            <button
+               class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-500"
+               onclick="window.history.back();"
+            >
+               Zurück
+            </button>
+            <h1 class="text-2xl font-bold text-white">LAUNCHPAD</h1>
+         </div>
+
+         <!-- Tab Switcher -->
+         <div class="flex gap-2">
+            <button
+               class="px-6 py-2 rounded-lg font-bold text-lg transition-colors"
+               :class="activeTab === 'ruhig' ? 'bg-blue-500 text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'"
+               @click="activeTab = 'ruhig'"
+            >
+               Ruhig
+            </button>
+            <button
+               class="px-6 py-2 rounded-lg font-bold text-lg transition-colors"
+               :class="activeTab === 'wild' ? 'bg-red-500 text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'"
+               @click="activeTab = 'wild'"
+            >
+               Wild
+            </button>
+         </div>
+
+         <!-- Blackout Button -->
+         <button
+            class="bg-black text-white px-6 py-2 rounded-lg font-bold border-2 border-gray-500 hover:border-white"
+            @click="sendBlackout()"
+         >
+            BLACKOUT
+         </button>
+      </nav>
+
+      <!-- Preset Grid -->
+      <main class="flex-1 p-2 overflow-hidden">
+         <div class="h-full grid grid-cols-9 grid-rows-5 gap-2">
+            <button
+               v-for="(preset, index) in currentPresets"
+               :key="activeTab + '-' + index"
+               class="preset-btn rounded-lg flex flex-col items-center justify-center text-center p-1 font-bold shadow-lg"
+               :class="[activePreset === preset ? 'active' : '', preset.textClass]"
+               :style="{ backgroundColor: `rgb(${preset.r}, ${preset.g}, ${preset.b})` }"
+               @click="sendPreset(preset)"
+            >
+               <span class="text-sm leading-tight">{{ preset.name }}</span>
+               <span class="text-xs opacity-75">{{ preset.colorName }}</span>
+            </button>
+         </div>
+      </main>
+   </div>
+
+   <script src="./static/flowbite.min.js"></script>
+
+   <script type="module">
+      const { createApp } = Vue
+
+      const app = createApp({
+         data () {
+            return {
+               environment: localStorage.getItem('environment') || 'samuels-macbook-pro.local:8000',
+               activeTab: 'ruhig',
+               activePreset: null,
+
+               // Ruhig (Calm) Presets - 45 buttons (9x5)
+               ruhigPresets: [
+                  // Row 1 - Solid colors
+                  { name: 'Solid', colorName: 'Weiss', effect: 0x20, r: 255, g: 255, b: 255, speed: 100, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Solid', colorName: 'Warmweiss', effect: 0x20, r: 255, g: 200, b: 100, speed: 100, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Solid', colorName: 'Rot', effect: 0x20, r: 255, g: 0, b: 0, speed: 100, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Solid', colorName: 'Orange', effect: 0x20, r: 255, g: 100, b: 0, speed: 100, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Solid', colorName: 'Gold', effect: 0x20, r: 255, g: 180, b: 0, speed: 100, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Solid', colorName: 'Grün', effect: 0x20, r: 0, g: 255, b: 0, speed: 100, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Solid', colorName: 'Cyan', effect: 0x20, r: 0, g: 255, b: 255, speed: 100, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Solid', colorName: 'Blau', effect: 0x20, r: 0, g: 0, b: 255, speed: 100, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Solid', colorName: 'Lila', effect: 0x20, r: 150, g: 0, b: 255, speed: 100, length: 4, intensity: 255, textClass: 'text-white' },
+
+                  // Row 2 - Pulse (slow breathing)
+                  { name: 'Pulse', colorName: 'Weiss', effect: 0x2A, r: 255, g: 255, b: 255, speed: 1500, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Pulse', colorName: 'Warmweiss', effect: 0x2A, r: 255, g: 200, b: 100, speed: 1500, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Pulse', colorName: 'Rot', effect: 0x2A, r: 255, g: 0, b: 0, speed: 1500, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Pulse', colorName: 'Orange', effect: 0x2A, r: 255, g: 100, b: 0, speed: 1500, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Pulse', colorName: 'Gold', effect: 0x2A, r: 255, g: 180, b: 0, speed: 1500, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Pulse', colorName: 'Grün', effect: 0x2A, r: 0, g: 255, b: 0, speed: 1500, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Pulse', colorName: 'Cyan', effect: 0x2A, r: 0, g: 255, b: 255, speed: 1500, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Pulse', colorName: 'Blau', effect: 0x2A, r: 0, g: 0, b: 255, speed: 1500, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Pulse', colorName: 'Lila', effect: 0x2A, r: 150, g: 0, b: 255, speed: 1500, length: 4, intensity: 255, textClass: 'text-white' },
+
+                  // Row 3 - Wave & Gradient
+                  { name: 'Wave', colorName: 'Blau', effect: 0x2D, r: 0, g: 100, b: 255, speed: 800, length: 10, intensity: 255, textClass: 'text-white' },
+                  { name: 'Wave', colorName: 'Grün', effect: 0x2D, r: 0, g: 255, b: 100, speed: 800, length: 10, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Wave', colorName: 'Lila', effect: 0x2D, r: 150, g: 0, b: 255, speed: 800, length: 10, intensity: 255, textClass: 'text-white' },
+                  { name: 'Wave', colorName: 'Pink', effect: 0x2D, r: 255, g: 50, b: 150, speed: 800, length: 10, intensity: 255, textClass: 'text-white' },
+                  { name: 'Gradient', colorName: 'Blau', effect: 0x2C, r: 0, g: 100, b: 255, speed: 500, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Gradient', colorName: 'Rot', effect: 0x2C, r: 255, g: 50, b: 50, speed: 500, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Gradient', colorName: 'Grün', effect: 0x2C, r: 50, g: 255, b: 50, speed: 500, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Gradient', colorName: 'Gold', effect: 0x2C, r: 255, g: 180, b: 0, speed: 500, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Gradient', colorName: 'Lila', effect: 0x2C, r: 150, g: 0, b: 255, speed: 500, length: 4, intensity: 255, textClass: 'text-white' },
+
+                  // Row 4 - Twinkle & DNA
+                  { name: 'Twinkle', colorName: 'Weiss', effect: 0x27, r: 255, g: 255, b: 255, speed: 200, length: 5, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Twinkle', colorName: 'Gold', effect: 0x27, r: 255, g: 200, b: 50, speed: 200, length: 5, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Twinkle', colorName: 'Blau', effect: 0x27, r: 100, g: 150, b: 255, speed: 200, length: 5, intensity: 255, textClass: 'text-white' },
+                  { name: 'DNA', colorName: 'Blau', effect: 0x30, r: 0, g: 100, b: 255, speed: 400, length: 8, intensity: 255, textClass: 'text-white' },
+                  { name: 'DNA', colorName: 'Grün', effect: 0x30, r: 0, g: 255, b: 100, speed: 400, length: 8, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'DNA', colorName: 'Lila', effect: 0x30, r: 150, g: 0, b: 255, speed: 400, length: 8, intensity: 255, textClass: 'text-white' },
+                  { name: 'Ripple', colorName: 'Blau', effect: 0x39, r: 0, g: 100, b: 255, speed: 300, length: 6, intensity: 255, textClass: 'text-white' },
+                  { name: 'Ripple', colorName: 'Cyan', effect: 0x39, r: 0, g: 255, b: 255, speed: 300, length: 6, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Ripple', colorName: 'Pink', effect: 0x39, r: 255, g: 50, b: 150, speed: 300, length: 6, intensity: 255, textClass: 'text-white' },
+
+                  // Row 5 - Rainbow & Special
+                  { name: 'Rainbow', colorName: 'Langsam', effect: 0x24, r: 255, g: 0, b: 0, speed: 100, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Rainbow', colorName: 'Medium', effect: 0x24, r: 0, g: 255, b: 0, speed: 50, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Rainbow', colorName: 'Static', effect: 0x23, r: 0, g: 0, b: 255, speed: 100, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Plasma', colorName: 'Bunt', effect: 0x3A, r: 255, g: 100, b: 200, speed: 100, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Plasma', colorName: 'Blau', effect: 0x3A, r: 50, g: 100, b: 255, speed: 100, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'ColorWipe', colorName: 'Rot', effect: 0x32, r: 255, g: 0, b: 0, speed: 50, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'ColorWipe', colorName: 'Grün', effect: 0x32, r: 0, g: 255, b: 0, speed: 50, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'ColorWipe', colorName: 'Blau', effect: 0x32, r: 0, g: 0, b: 255, speed: 50, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'ColorWipe', colorName: 'Gold', effect: 0x32, r: 255, g: 180, b: 0, speed: 50, length: 4, intensity: 255, textClass: 'text-gray-800' }
+               ],
+
+               // Wild Presets - 45 buttons (9x5)
+               wildPresets: [
+                  // Row 1 - Strobe/Blink
+                  { name: 'Strobe', colorName: 'Weiss', effect: 0x21, r: 255, g: 255, b: 255, speed: 50, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Strobe', colorName: 'Rot', effect: 0x21, r: 255, g: 0, b: 0, speed: 50, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Strobe', colorName: 'Blau', effect: 0x21, r: 0, g: 0, b: 255, speed: 50, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Strobe', colorName: 'Grün', effect: 0x21, r: 0, g: 255, b: 0, speed: 50, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Blink', colorName: 'Weiss', effect: 0x21, r: 255, g: 255, b: 255, speed: 200, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Blink', colorName: 'Rot', effect: 0x21, r: 255, g: 0, b: 0, speed: 200, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Blink', colorName: 'Gold', effect: 0x21, r: 255, g: 180, b: 0, speed: 200, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Blink', colorName: 'Cyan', effect: 0x21, r: 0, g: 255, b: 255, speed: 200, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Blink', colorName: 'Lila', effect: 0x21, r: 150, g: 0, b: 255, speed: 200, length: 4, intensity: 255, textClass: 'text-white' },
+
+                  // Row 2 - Chase (running lights)
+                  { name: 'Chase', colorName: 'Weiss', effect: 0x25, r: 255, g: 255, b: 255, speed: 50, length: 5, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Chase', colorName: 'Rot', effect: 0x25, r: 255, g: 0, b: 0, speed: 50, length: 5, intensity: 255, textClass: 'text-white' },
+                  { name: 'Chase', colorName: 'Blau', effect: 0x25, r: 0, g: 0, b: 255, speed: 50, length: 5, intensity: 255, textClass: 'text-white' },
+                  { name: 'Chase', colorName: 'Grün', effect: 0x25, r: 0, g: 255, b: 0, speed: 50, length: 5, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Chase', colorName: 'Gold', effect: 0x25, r: 255, g: 180, b: 0, speed: 50, length: 5, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Theater', colorName: 'Weiss', effect: 0x26, r: 255, g: 255, b: 255, speed: 80, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Theater', colorName: 'Rot', effect: 0x26, r: 255, g: 0, b: 0, speed: 80, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Theater', colorName: 'Gold', effect: 0x26, r: 255, g: 180, b: 0, speed: 80, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Theater', colorName: 'Blau', effect: 0x26, r: 0, g: 100, b: 255, speed: 80, length: 4, intensity: 255, textClass: 'text-white' },
+
+                  // Row 3 - Meteor & Fire
+                  { name: 'Meteor', colorName: 'Weiss', effect: 0x2E, r: 255, g: 255, b: 255, speed: 30, length: 8, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Meteor', colorName: 'Rot', effect: 0x2E, r: 255, g: 50, b: 0, speed: 30, length: 8, intensity: 255, textClass: 'text-white' },
+                  { name: 'Meteor', colorName: 'Blau', effect: 0x2E, r: 0, g: 100, b: 255, speed: 30, length: 8, intensity: 255, textClass: 'text-white' },
+                  { name: 'Meteor', colorName: 'Grün', effect: 0x2E, r: 0, g: 255, b: 50, speed: 30, length: 8, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Fire', colorName: 'Orange', effect: 0x29, r: 255, g: 100, b: 0, speed: 50, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Fire', colorName: 'Rot', effect: 0x29, r: 255, g: 30, b: 0, speed: 50, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Fire', colorName: 'Blau', effect: 0x29, r: 0, g: 50, b: 255, speed: 50, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Fire', colorName: 'Grün', effect: 0x29, r: 0, g: 200, b: 50, speed: 50, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Fire', colorName: 'Lila', effect: 0x29, r: 150, g: 0, b: 200, speed: 50, length: 4, intensity: 255, textClass: 'text-white' },
+
+                  // Row 4 - Scanner, Bounce, Lightning
+                  { name: 'Scanner', colorName: 'Rot', effect: 0x33, r: 255, g: 0, b: 0, speed: 30, length: 6, intensity: 255, textClass: 'text-white' },
+                  { name: 'Scanner', colorName: 'Blau', effect: 0x33, r: 0, g: 100, b: 255, speed: 30, length: 6, intensity: 255, textClass: 'text-white' },
+                  { name: 'Scanner', colorName: 'Grün', effect: 0x33, r: 0, g: 255, b: 0, speed: 30, length: 6, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Bounce', colorName: 'Weiss', effect: 0x31, r: 255, g: 255, b: 255, speed: 40, length: 6, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Bounce', colorName: 'Rot', effect: 0x31, r: 255, g: 0, b: 0, speed: 40, length: 6, intensity: 255, textClass: 'text-white' },
+                  { name: 'Bounce', colorName: 'Blau', effect: 0x31, r: 0, g: 100, b: 255, speed: 40, length: 6, intensity: 255, textClass: 'text-white' },
+                  { name: 'Lightning', colorName: 'Weiss', effect: 0x35, r: 255, g: 255, b: 255, speed: 100, length: 5, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Lightning', colorName: 'Blau', effect: 0x35, r: 150, g: 200, b: 255, speed: 100, length: 5, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Lightning', colorName: 'Lila', effect: 0x35, r: 200, g: 100, b: 255, speed: 100, length: 5, intensity: 255, textClass: 'text-white' },
+
+                  // Row 5 - Police, Confetti, Special
+                  { name: 'Police', colorName: 'Classic', effect: 0x36, r: 255, g: 0, b: 0, speed: 100, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Police', colorName: 'Schnell', effect: 0x36, r: 255, g: 0, b: 0, speed: 50, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Confetti', colorName: 'Bunt', effect: 0x34, r: 255, g: 255, b: 255, speed: 50, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Confetti', colorName: 'Rot', effect: 0x34, r: 255, g: 50, b: 50, speed: 50, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Confetti', colorName: 'Blau', effect: 0x34, r: 50, g: 100, b: 255, speed: 50, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Stacking', colorName: 'Weiss', effect: 0x37, r: 255, g: 255, b: 255, speed: 30, length: 4, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Stacking', colorName: 'Rot', effect: 0x37, r: 255, g: 0, b: 0, speed: 30, length: 4, intensity: 255, textClass: 'text-white' },
+                  { name: 'Marquee', colorName: 'Weiss', effect: 0x38, r: 255, g: 255, b: 255, speed: 80, length: 6, intensity: 255, textClass: 'text-gray-800' },
+                  { name: 'Rainbow', colorName: 'Schnell', effect: 0x24, r: 255, g: 0, b: 0, speed: 20, length: 4, intensity: 255, textClass: 'text-white' }
+               ]
+            }
+         },
+
+         computed: {
+            currentPresets () {
+               return this.activeTab === 'ruhig' ? this.ruhigPresets : this.wildPresets
+            }
+         },
+
+         methods: {
+            sendPreset (preset) {
+               this.activePreset = preset
+
+               const command = {
+                  effect: preset.effect,
+                  red: preset.r,
+                  green: preset.g,
+                  blue: preset.b,
+                  speed: preset.speed,
+                  length: preset.length,
+                  intensity: preset.intensity
+               }
+
+               fetch(`http://${this.environment}/command`, {
+                  method: 'POST',
+                  headers: {
+                     'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(command)
+               })
+            },
+
+            sendBlackout () {
+               this.activePreset = null
+
+               const command = {
+                  effect: 0x14, // STATE_BLACKOUT
+                  red: 0,
+                  green: 0,
+                  blue: 0,
+                  speed: 0,
+                  length: 0,
+                  intensity: 0
+               }
+
+               fetch(`http://${this.environment}/command`, {
+                  method: 'POST',
+                  headers: {
+                     'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(command)
+               })
+            }
+         }
+      })
+
+      app.mount('#app')
+   </script>
+</body>
+
+</html>

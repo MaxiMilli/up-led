@@ -11,44 +11,30 @@ async def _run(cmd: list[str]) -> tuple[int, str, str]:
     return proc.returncode, stdout.decode().strip(), stderr.decode().strip()
 
 
-async def start_hotspot(ssid: str, password: str) -> bool:
-    """Start a WiFi hotspot using NetworkManager (nmcli)."""
+async def check_hotspot_status() -> bool:
+    """Check if hostapd is running (hotspot managed by systemd)."""
     try:
-        # Disconnect existing wifi connection on wlan0
-        await _run(["/usr/bin/sudo", "/usr/bin/nmcli", "device", "disconnect", "wlan0"])
-
-        # Delete old hotspot connection if present
-        await _run(["/usr/bin/sudo", "/usr/bin/nmcli", "connection", "delete", "Hotspot"])
-
-        # Create and activate hotspot
         rc, stdout, stderr = await _run([
-            "/usr/bin/sudo", "/usr/bin/nmcli", "device", "wifi", "hotspot",
-            "ifname", "wlan0",
-            "ssid", ssid,
-            "password", password,
+            "/usr/bin/systemctl", "is-active", "hostapd"
         ])
-
-        if rc == 0:
-            print(f"WiFi hotspot '{ssid}' started successfully")
-            return True
-        else:
-            print(f"Failed to start hotspot: {stderr}")
-            return False
+        return rc == 0 and stdout == "active"
     except Exception as e:
-        print(f"Error starting hotspot: {e}")
+        print(f"Error checking hotspot status: {e}")
         return False
 
 
-async def stop_hotspot() -> bool:
-    """Stop the WiFi hotspot."""
+async def restart_hotspot() -> bool:
+    """Restart hostapd service if needed."""
     try:
-        rc, stdout, stderr = await _run(["/usr/bin/sudo", "/usr/bin/nmcli", "connection", "down", "Hotspot"])
+        rc, stdout, stderr = await _run([
+            "/usr/bin/sudo", "/usr/bin/systemctl", "restart", "hostapd"
+        ])
         if rc == 0:
-            print("WiFi hotspot stopped")
+            print("Hotspot (hostapd) restarted successfully")
             return True
         else:
-            print(f"Failed to stop hotspot: {stderr}")
+            print(f"Failed to restart hotspot: {stderr}")
             return False
     except Exception as e:
-        print(f"Error stopping hotspot: {e}")
+        print(f"Error restarting hotspot: {e}")
         return False

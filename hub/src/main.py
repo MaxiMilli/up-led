@@ -6,7 +6,7 @@ from src.hub_api.routes import router as hub_router
 from src.nano_network.api import router as nano_router
 from src.nano_network.serial_gateway import SerialGateway
 from src.nano_network.nano_manager import NanoManager
-from src.nano_network.hotspot import start_hotspot, stop_hotspot
+from src.nano_network.hotspot import check_hotspot_status
 from src.config import settings
 from src.show.player_instance import player as song_player
 from fastapi.staticfiles import StaticFiles
@@ -35,7 +35,12 @@ nano_manager = NanoManager()
 @app.on_event("startup")
 async def startup_event():
 	"""Initialize serial gateway and start heartbeat on server startup."""
-	await start_hotspot(settings.WIFI_SSID, settings.WIFI_PASSWORD)
+	# Hotspot is managed by hostapd systemd service, just check status
+	hotspot_ok = await check_hotspot_status()
+	if hotspot_ok:
+		print("Hotspot (hostapd) is running")
+	else:
+		print("Warning: Hotspot (hostapd) is not running!")
 
 	if gateway.connect():
 		await gateway.start_heartbeat_loop()
@@ -50,7 +55,7 @@ async def shutdown_event():
 	"""Clean up on server shutdown."""
 	gateway.stop_heartbeat_loop()
 	gateway.disconnect()
-	await stop_hotspot()
+	# Hotspot is managed by hostapd, don't stop it
 	print("Serial gateway shut down")
 
 
