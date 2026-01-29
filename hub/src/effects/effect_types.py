@@ -53,7 +53,7 @@ class EffectType(Enum):
 		@param {int} note - MIDI note number
 		@returns {EffectType} Effect type for the note
 		"""
-		if 30 <= note <= 45 or 100 <= note <= 110:
+		if 30 <= note <= 52 or 100 <= note <= 110:
 			return cls.SOLID
 		else:
 			raise ValueError(f"Unknown effect note: {note}")

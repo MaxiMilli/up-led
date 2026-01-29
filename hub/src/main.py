@@ -1,5 +1,7 @@
 import asyncio
+import socket
 import uvicorn
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from src.hub_api.routes import router as hub_router
@@ -13,28 +15,35 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
 
-app = FastAPI()
 
-app.mount("/static", StaticFiles(directory=settings.STATIC_DIR), name="static")
+def check_port_available(host: str, port: int) -> bool:
+	"""Check if a port is available before starting the server."""
+	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+		s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		try:
+			s.bind((host, port))
+			return True
+		except OSError:
+			return False
 
-app.add_middleware(
-	CORSMiddleware,
-	allow_origins=["*"],
-	allow_credentials=True,
-	allow_methods=["*"],
-	allow_headers=["*"],
-)
-
-app.include_router(hub_router)
-app.include_router(nano_router)
 
 gateway = SerialGateway()
 nano_manager = NanoManager()
 
 
-@app.on_event("startup")
-async def startup_event():
-	"""Initialize serial gateway and start heartbeat on server startup."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+	"""Manage startup and shutdown of serial gateway."""
+	# Check port availability before initializing hardware
+	if not check_port_available(settings.HOST_IP, settings.API_PORT):
+		print(f"ERROR: Port {settings.API_PORT} is already in use. Killing existing process...")
+		os.system(f"fuser -k {settings.API_PORT}/tcp 2>/dev/null")
+		await asyncio.sleep(1)
+		if not check_port_available(settings.HOST_IP, settings.API_PORT):
+			print(f"FATAL: Port {settings.API_PORT} still in use after kill attempt. Exiting.")
+			yield
+			return
+
 	# Hotspot is managed by hostapd systemd service, just check status
 	hotspot_ok = await check_hotspot_status()
 	if hotspot_ok:
@@ -49,14 +58,28 @@ async def startup_event():
 	else:
 		print("Warning: Serial gateway not connected - no device found")
 
+	yield
 
-@app.on_event("shutdown")
-async def shutdown_event():
-	"""Clean up on server shutdown."""
+	# Shutdown
 	gateway.stop_heartbeat_loop()
 	gateway.disconnect()
-	# Hotspot is managed by hostapd, don't stop it
 	print("Serial gateway shut down")
+
+
+app = FastAPI(lifespan=lifespan)
+
+app.mount("/static", StaticFiles(directory=settings.STATIC_DIR), name="static")
+
+app.add_middleware(
+	CORSMiddleware,
+	allow_origins=["*"],
+	allow_credentials=True,
+	allow_methods=["*"],
+	allow_headers=["*"],
+)
+
+app.include_router(hub_router)
+app.include_router(nano_router)
 
 
 @app.get("/gateway/status")

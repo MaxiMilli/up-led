@@ -6,23 +6,31 @@ from .effect_types import EffectType
 
 
 EFFECT_NOTE_TO_COMMAND = {
-	30: 0x25,  # Running Light -> CHASE
-	31: 0x27,  # Glitter -> TWINKLE
-	32: 0x2D,  # Wave -> WAVE
-	33: 0x2A,  # Pulsate -> PULSE
-	34: 0x2A,  # Fade -> PULSE
-	35: 0x21,  # Strobo -> BLINK
+	30: 0x20,  # Solid -> SOLID
+	31: 0x21,  # Blink -> BLINK
+	32: 0x23,  # Rainbow -> RAINBOW
+	33: 0x24,  # Rainbow Cycle -> RAINBOW_CYCLE
+	34: 0x25,  # Chase -> CHASE
+	35: 0x26,  # Theater Chase -> THEATER_CHASE
 	36: 0x27,  # Twinkle -> TWINKLE
-	37: 0x2A,  # Heartbeat -> PULSE
-	38: 0x2E,  # Meteor -> METEOR
-	39: 0x29,  # Flicker -> FIRE
-	40: 0x2E,  # Comet -> METEOR
-	41: 0x2D,  # Doppler -> WAVE
-	42: 0x27,  # Firework -> TWINKLE
-	43: 0x30,  # DNA Helix -> DNA
-	44: 0x2C,  # Gradient -> GRADIENT
-	45: 0x24,  # Rainbow Cycle -> RAINBOW_CYCLE
+	37: 0x29,  # Fire -> FIRE
+	38: 0x2A,  # Pulse -> PULSE
+	39: 0x2C,  # Gradient -> GRADIENT
+	40: 0x2D,  # Wave -> WAVE
+	41: 0x2E,  # Meteor -> METEOR
+	42: 0x30,  # DNA -> DNA
+	43: 0x31,  # Bounce -> BOUNCE
+	44: 0x32,  # Color Wipe -> COLOR_WIPE
+	45: 0x33,  # Scanner -> SCANNER
+	46: 0x34,  # Confetti -> CONFETTI
+	47: 0x35,  # Lightning -> LIGHTNING
+	48: 0x36,  # Police -> POLICE
+	49: 0x37,  # Stacking -> STACKING
+	50: 0x38,  # Marquee -> MARQUEE
+	51: 0x39,  # Ripple -> RIPPLE
+	52: 0x3A,  # Plasma -> PLASMA
 
+	# System-/State-Befehle
 	100: 0x10,  # Ausschalten -> STATE_OFF
 	101: 0x11,  # Standby -> STATE_STANDBY
 	102: 0x12,  # Active Standby -> STATE_ACTIVE
